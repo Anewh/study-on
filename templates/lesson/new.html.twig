@@ -1,11 +1,13 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}New Lesson{% endblock %}
+{% block title %}{{ "new / " ~ lesson.course.name ~ ' / ' ~ parent() }}{% endblock %}
 
 {% block body %}
-    <h1>Create new Lesson</h1>
+    <h1>Создание урока</h1>
+	<h5>Курс
+		<a href="{{ path('app_course_show', {'id': lesson.course.id}) }}">{{ lesson.course.name }}</a>
+	</h5>
 
     {{ include('lesson/_form.html.twig') }}
 
-    <a href="{{ path('app_lesson_index') }}">back to list</a>
 {% endblock %}

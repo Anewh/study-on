@@ -1,33 +1,27 @@
 {% extends 'base.html.twig' %}
 
-{% block title %}Course index
+{% block title %} {{ "Courses / " ~ parent() }}
 {% endblock %}
 
 {% block body %}
-	<h1>Course index</h1>
-
-	<table class="table">
-		<thead>
-			<tr>
-				<th>Name</th>
-				<th>Description</th>
-			</tr>
-		</thead>
-		<tbody>
-			{% for course in courses %}
-				<tr>
-					<td>
-						<a href="{{ path('app_course_show', {'id': course.id}) }}">{{ course.name }}</a>
-					</td>
-						<td>{{ course.description }}</td>
-				</tr>
+	<h1>Курсы</h1>
+	<div class="row  row-cols-1 row-cols-md-2 g-4">
+	  {% for course in courses %}	
+		<div class="col">
+            <div class="card">
+              <div class="card-body">
+                <h5 class="card-title"><a href="{{ path('app_course_show', {'id': course.id}) }}">{{ course.name }}</a></h5>
+                <p class="card-text">{{ course.description }}</p>
+                <a href="{{ path('app_course_show', {'id': course.id}) }}" class="btn btn-primary"> Подробнее </a>
+              </div>
+            </div>
+          </div>
 			{% else %}
-				<tr>
-					<td colspan="5">no records found</td>
-				</tr>
+				<h3> Здесь пока нет ни одного курса</h3>
 			{% endfor %}
-		</tbody>
-	</table>
+	</div>
+	
 
-	<a href="{{ path('app_course_new') }}">Create new</a>
+	<a class="btn btn-secondary p-2 px-4 mt-3 " href="{{ path('app_course_new') }}"> Новый курс </a>
 {% endblock %}
+

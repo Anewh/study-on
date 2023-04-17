@@ -6,6 +6,7 @@ use App\Entity\Course;
 use App\Form\CourseType;
 use App\Repository\CourseRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Exception\BadRequestException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -29,6 +30,9 @@ class CourseController extends AbstractController
         $form->handleRequest($request);
 
         if ($form->isSubmitted() && $form->isValid()) {
+            if ($courseRepository->count(['code' => $course->getCode()]) > 0) {
+                throw new BadRequestException('Course with this code already exist. Code must be unique');
+            }
             $courseRepository->save($course, true);
 
             return $this->redirectToRoute('app_course_index', [], Response::HTTP_SEE_OTHER);
@@ -58,7 +62,9 @@ class CourseController extends AbstractController
         if ($form->isSubmitted() && $form->isValid()) {
             $courseRepository->save($course, true);
 
-            return $this->redirectToRoute('app_course_index', [], Response::HTTP_SEE_OTHER);
+            return $this->render('course/show.html.twig', [
+                'course' => $course,
+            ]);
         }
 
         return $this->renderForm('course/edit.html.twig', [
@@ -70,7 +76,7 @@ class CourseController extends AbstractController
     #[Route('/{id}', name: 'app_course_delete', methods: ['POST'])]
     public function delete(Request $request, Course $course, CourseRepository $courseRepository): Response
     {
-        if ($this->isCsrfTokenValid('delete'.$course->getId(), $request->request->get('_token'))) {
+        if ($this->isCsrfTokenValid('delete' . $course->getId(), $request->request->get('_token'))) {
             $courseRepository->remove($course, true);
         }
 
