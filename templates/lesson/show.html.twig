@@ -5,9 +5,9 @@
 {% endblock %}
 
 {% block body %}
-	<h1>{{ lesson.name }}</h1>
+	<h1 class="lesson-name">{{ lesson.name }}</h1>
 	<h5>Курс
-		<a href="{{ path('app_course_show', {'id': lesson.course.id}) }}">{{ lesson.course.name }}</a>
+		<a class='course' href="{{ path('app_course_show', {'id': lesson.course.id}) }}">{{ lesson.course.name }}</a>
 	</h5>
 
     <div class="d-flex flex-row gap-1 mt-3">
@@ -19,7 +19,7 @@
 
     <div class="accordion card mt-2 p-3">         
         {% for line in lesson.content|split("\n") %}         
-            <div>{{ line }}</div>         
+            <div class="content">{{ line }}</div>         
         {% endfor %}         
     </div>
 

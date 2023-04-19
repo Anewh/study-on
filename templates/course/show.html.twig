@@ -5,14 +5,14 @@
 {% endblock %}
 
 {% block body %}
-	<h1>{{ course.name }}</h1>
+	<h1 class="course-name">{{ course.name }}</h1>
 	<p class="card-text">{{ course.description }}</p>
 </table>
 <h1 class="mt-3">Уроки</h1>
-<ol>
+<ol class="list-group list-group-numbered">
 	{% for lesson in course.lessons|sort((a, b) => a.serial <=> b.serial) %}
-		<li>
-			<a href="{{ path('app_lesson_show', {'id': lesson.id}) }}">{{ lesson.name }}</a>
+		<li class="list-group-item">
+			<a class='lesson' href="{{ path('app_lesson_show', {'id': lesson.id}) }}">{{ lesson.name }}</a>
 		</li>
 	{% endfor %}
 </ol>
@@ -22,11 +22,12 @@
 	<a class="btn btn-outline-secondary" href="{{ path('app_course_index') }}">
 		К списку курсов
 	</a>
-	<a class="btn btn-outline-secondary" href="{{ path('app_course_edit', {'id': course.id}) }}">
+	<a class="course-edit btn btn-outline-secondary" href="{{ path('app_course_edit', {'id': course.id}) }}">
 		Редактировать
 	</a>
 	<a class="btn btn-outline-secondary" href="{{ path('app_lesson_new', {'course_id': course.id}) }}">
 		Добавить урок
 	</a>
 	{{ include('course/_delete_form.html.twig') }}
-</div>{% endblock %}
+</div>
+{% endblock %}

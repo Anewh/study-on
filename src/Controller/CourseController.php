@@ -6,6 +6,7 @@ use App\Entity\Course;
 use App\Form\CourseType;
 use App\Repository\CourseRepository;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\Form\FormError;
 use Symfony\Component\HttpFoundation\Exception\BadRequestException;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -29,13 +30,17 @@ class CourseController extends AbstractController
         $form = $this->createForm(CourseType::class, $course);
         $form->handleRequest($request);
 
-        if ($form->isSubmitted() && $form->isValid()) {
-            if ($courseRepository->count(['code' => $course->getCode()]) > 0) {
-                throw new BadRequestException('Course with this code already exist. Code must be unique');
-            }
-            $courseRepository->save($course, true);
+        if ($courseRepository->count(['code' => $course->getCode()]) > 0) {
+            $form->addError(new FormError('Курс с данным кодом уже существует'));
+        }
 
-            return $this->redirectToRoute('app_course_index', [], Response::HTTP_SEE_OTHER);
+        if ($form->isSubmitted() && $form->isValid()) {
+            $courseRepository->save($course, true);   
+            return $this->redirectToRoute(
+                'app_course_show',
+                ['id' => $course->getId()],
+                Response::HTTP_SEE_OTHER
+            );         
         }
 
         return $this->renderForm('course/new.html.twig', [
@@ -59,12 +64,18 @@ class CourseController extends AbstractController
         $form = $this->createForm(CourseType::class, $course);
         $form->handleRequest($request);
 
+        if ($courseRepository->count(['code' => $course->getCode()]) > 0) {
+            $form->addError(new FormError('Курс с данным кодом уже существует'));
+        }
+
         if ($form->isSubmitted() && $form->isValid()) {
             $courseRepository->save($course, true);
 
-            return $this->render('course/show.html.twig', [
-                'course' => $course,
-            ]);
+            return $this->redirectToRoute(
+                'app_course_show',
+                ['id' => $course->getId()],
+                Response::HTTP_SEE_OTHER
+            );         
         }
 
         return $this->renderForm('course/edit.html.twig', [

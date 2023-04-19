@@ -7,9 +7,9 @@
 {% block body %}
 	<h1>{{ lesson.name }}</h1>
 	<h5>Курс
-		<a href="{{ path('app_course_show', {'id': lesson.course.id}) }}">{{ lesson.course.name }}</a>
+		<a class="course" href="{{ path('app_course_show', {'id': lesson.course.id}) }}">{{ lesson.course.name }}</a>
 	</h5>
-    
+
 	{{ include('lesson/_form.html.twig', {'button_label': 'Сохранить'}) }}
 
 	<div class="d-flex flex-row gap-1 mt-3">

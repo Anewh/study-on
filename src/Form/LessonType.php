@@ -15,6 +15,7 @@ use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
 use Symfony\Component\Validator\Constraints\Length;
 use Symfony\Component\Validator\Constraints\LessThan;
+use Symfony\Component\Validator\Constraints\NotBlank;
 
 class LessonType extends AbstractType
 {
@@ -34,19 +35,26 @@ class LessonType extends AbstractType
             ])
             ->add('name', TextType::class, [
                 'label' => 'Название',
-                'required' => true,
-                'constraints' => [new Length(max:255,maxMessage: "Имя не должно быть длинее {{ limit }} ")],
-                'attr' => ['class ' => 'form-control']
+                'constraints' => [
+                    new NotBlank(message: 'Название урока не может быть пустым'),
+                    new Length(max:255, maxMessage: "Имя не должно быть длинее {{ limit }} ")
+                ],
+                'attr' => ['class ' => 'form-control'],
+                'empty_data' => ''
             ])
             ->add('content', TextareaType::class, [
                 'label' => 'Содержание',
-                'required' => true,
-                'attr' => ['class ' => 'form-control']
+                'attr' => ['class ' => 'form-control'],
+                'constraints' => [
+                    new NotBlank(message: 'Содержимое урока не может быть пустым')
+                ],
             ])
             ->add('serial', NumberType::class, [
                 'label' => 'Порядковый номер',
-                'required' => true,
-                'constraints' => [new LessThan(value:10000, message:"Порядковый номер должен быть меньше, чем {{ compared_value }} ")],
+                'constraints' => [
+                    new LessThan(value:10000, message:"Порядковый номер должен быть меньше, чем {{ compared_value }} "),
+                    new NotBlank(message: 'Порядковый номер не может быть пустым')
+                ],
                 'attr' => [
                     'max' => 10000,
                     'min' => 1,
