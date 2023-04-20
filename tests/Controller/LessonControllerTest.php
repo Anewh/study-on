@@ -15,11 +15,11 @@ class LessonControllerTest extends AbstractTest
         $lessons = self::getEntityManager()->getRepository(Lesson::class)->findAll();
         foreach ($lessons as $lesson) {
             // детальная страница
-            $client->request('GET', '/lessons/'.$lesson->getId());
+            $client->request('GET', '/lessons/' . $lesson->getId());
             $this->assertResponseOk();
 
             // страница редактирования
-            $client->request('GET', '/lessons/'.$lesson->getId().'/edit');
+            $client->request('GET', '/lessons/' . $lesson->getId() . '/edit');
             $this->assertResponseOk();
         }
     }
@@ -29,11 +29,11 @@ class LessonControllerTest extends AbstractTest
         $client = self::getClient();
         $lessons = self::getEntityManager()->getRepository(Lesson::class)->findAll();
         foreach ($lessons as $lesson) {
-            $client->request('POST', '/lessons/'.$lesson->getId().'/edit');
+            $client->request('POST', '/lessons/' . $lesson->getId() . '/edit');
             $this->assertResponseOk();
         }
     }
-    
+
     public function testSuccessfulLessonCreating(): void
     {
         // от списка курсов переходим на страницу просмотра курса
@@ -64,7 +64,7 @@ class LessonControllerTest extends AbstractTest
         $client->submit($form);
 
         // проверяем редирект
-        self::assertSame($client->getResponse()->headers->get('location'), '/courses/'.$course->getId());
+        self::assertSame($client->getResponse()->headers->get('location'), '/courses/' . $course->getId());
         $crawler = $client->followRedirect();
 
         $this->assertResponseOk();
@@ -183,7 +183,7 @@ class LessonControllerTest extends AbstractTest
         $link = $crawler->filter('.course-show')->first()->link();
         $crawler = $client->click($link);
         $this->assertResponseOk();
-    
+
         // переходим к деталям урока
         $link = $crawler->filter('.lesson')->first()->link();
         $crawler = $client->click($link);
@@ -206,7 +206,7 @@ class LessonControllerTest extends AbstractTest
         $client->submit($form);
 
         // проверяем редирект
-        self::assertSame($client->getResponse()->headers->get('location'), '/courses/'.$course->getId());
+        self::assertSame($client->getResponse()->headers->get('location'), '/courses/' . $course->getId());
         $crawler = $client->followRedirect();
         $this->assertResponseOk();
 
@@ -233,7 +233,7 @@ class LessonControllerTest extends AbstractTest
         $link = $crawler->filter('.course-show')->first()->link();
         $crawler = $client->click($link);
         $this->assertResponseOk();
-    
+
         // переходим к деталям урока
         $link = $crawler->filter('.lesson')->first()->link();
         $crawler = $client->click($link);
@@ -262,7 +262,7 @@ class LessonControllerTest extends AbstractTest
         $this->assertResponseOk();
 
         $client->submitForm('Удалить');
-        self::assertSame($client->getResponse()->headers->get('location'), '/courses/'.$course->getId());
+        self::assertSame($client->getResponse()->headers->get('location'), '/courses/' . $course->getId());
         $crawler = $client->followRedirect();
 
         // сравнение количества уроков

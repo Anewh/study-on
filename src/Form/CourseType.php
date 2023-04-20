@@ -21,14 +21,20 @@ class CourseType extends AbstractType
                 'label' => 'Код',
                 'constraints' => [
                     new NotBlank(message: 'Символьный код не может быть пустым'),
-                    new Length(['max' => 255], maxMessage: 'Значение не должно превышать {{ limit }}')
+                    new Length(
+                        ['max' => 255],
+                        maxMessage: 'Значение не должно превышать {{ limit }}'
+                    )
                 ],
                 'empty_data' => ''
             ])
             ->add('name', TextType::class, [
                 'label' => 'Название',
                 'constraints' => [
-                    new Length(['max' => 255], maxMessage: 'Значение не должно превышать {{ limit }}'),
+                    new Length(
+                        ['max' => 255],
+                        maxMessage: 'Значение не должно превышать {{ limit }}'
+                    ),
                     new NotBlank(message: 'Название курса не может быть пустым')
                 ],
                 'empty_data' => ''
@@ -37,7 +43,10 @@ class CourseType extends AbstractType
                 'required' => false,
                 'label' => 'Описание',
                 'constraints' => [
-                    new Length(['max' => 1000], maxMessage: 'Значение не должно превышать {{ limit }}')
+                    new Length(
+                        ['max' => 1000],
+                        maxMessage: 'Значение не должно превышать {{ limit }}'
+                    )
                 ]
             ])
         ;

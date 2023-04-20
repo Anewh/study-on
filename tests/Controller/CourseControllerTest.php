@@ -74,7 +74,7 @@ class CourseControllerTest extends AbstractTest
             $this->assertResponseOk();
         }
     }
-    
+
     public function testNumberOfCourses(): void
     {
         $client = self::getClient();
@@ -149,7 +149,7 @@ class CourseControllerTest extends AbstractTest
             'course[description]' => 'Description course for test',
         ]);
         $client->submit($courseCreatingForm);
-        $this->assertResponseCode(422);   
+        $this->assertResponseCode(422);
 
         // Проверяем наличие сообщения об ошибке
         self::assertSelectorTextContains(
@@ -178,7 +178,7 @@ class CourseControllerTest extends AbstractTest
             'course[description]' => 'Description course for test',
         ]);
         $client->submit($courseCreatingForm);
-        $this->assertResponseCode(422);   
+        $this->assertResponseCode(422);
 
         // Проверяем наличие сообщения об ошибке
         self::assertSelectorTextContains(
@@ -234,18 +234,18 @@ class CourseControllerTest extends AbstractTest
         $courseId = self::getEntityManager()
             ->getRepository(Course::class)
             ->findOneBy(['code' => $form['course[code]']->getValue()])->getId();
-        
+
         // заполняем форму корректными данными
         $form['course[code]'] = 'lastcodeedit';
         $form['course[name]'] = 'Course name for test';
         $form['course[description]'] = 'Description course for test';
         $client->submit($form);
-        
+
         // проверяем редирект
         $crawler = $client->followRedirect();
         $this->assertRouteSame('app_course_show', ['id' => $courseId]);
         $this->assertResponseOk();
-        
+
         // проверяем изменение данных
         $this->assertSame($crawler->filter('.course-name')->text(), 'Course name for test');
         $this->assertSame($crawler->filter('.card-text')->text(), 'Description course for test');
@@ -269,7 +269,7 @@ class CourseControllerTest extends AbstractTest
 
         $submitButton = $crawler->selectButton('Сохранить');
         $form = $submitButton->form();
-        
+
         // пробуем сохранить курс без кода
         $form['course[code]'] = '';
         $form['course[name]'] = 'Course name for test';
@@ -310,7 +310,7 @@ class CourseControllerTest extends AbstractTest
         $crawler = $client->followRedirect();
 
         $coursesCountAfterDelete = count(self::getEntityManager()->getRepository(Course::class)->findAll());
-        
+
         // проверка соответствия кол-ва курсов
         self::assertSame($coursesCount - 1, $coursesCountAfterDelete);
         //dd($coursesCountAfterDelete);

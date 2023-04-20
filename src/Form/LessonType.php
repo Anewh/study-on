@@ -37,7 +37,8 @@ class LessonType extends AbstractType
                 'label' => 'Название',
                 'constraints' => [
                     new NotBlank(message: 'Название урока не может быть пустым'),
-                    new Length(max:255, maxMessage: "Имя не должно быть длинее {{ limit }} ")
+                    new Length(max: 255,
+                        maxMessage: "Имя не должно быть длинее {{ limit }} ")
                 ],
                 'attr' => ['class ' => 'form-control'],
                 'empty_data' => ''
@@ -52,7 +53,8 @@ class LessonType extends AbstractType
             ->add('serial', NumberType::class, [
                 'label' => 'Порядковый номер',
                 'constraints' => [
-                    new LessThan(value:10000, message:"Порядковый номер должен быть меньше, чем {{ compared_value }} "),
+                    new LessThan(value: 10000,
+                        message: "Порядковый номер должен быть меньше, чем {{ compared_value }} "),
                     new NotBlank(message: 'Порядковый номер не может быть пустым')
                 ],
                 'attr' => [
@@ -61,7 +63,7 @@ class LessonType extends AbstractType
                 ]
             ])
             ->add('course', HiddenType::class)
-            ;
+        ;
         $builder->get('course')
             ->addModelTransformer(
                 new CallbackTransformer(

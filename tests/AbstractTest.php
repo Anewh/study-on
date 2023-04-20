@@ -29,40 +29,17 @@ abstract class AbstractTest extends WebTestCase
         static::$client = null;
     }
 
+    /**
+     * Shortcut.
+     */
+    protected static function getEntityManager()
+    {
+        return static::getContainer()->get('doctrine')->getManager();
+    }
+
     public function assertResponseOk(?Response $response = null, ?string $message = null, string $type = 'text/html')
     {
         $this->failOnResponseStatusCheck($response, 'isOk', $message, $type);
-    }
-
-    /**
-     * @return string
-     */
-    public function guessErrorMessageFromResponse(Response $response, string $type = 'text/html')
-    {
-        try {
-            $crawler = new Crawler();
-            $crawler->addContent($response->getContent(), $type);
-
-            if (!\count($crawler->filter('title'))) {
-                $add = '';
-                $content = $response->getContent();
-
-                if ('application/json' === $response->headers->get('Content-Type')) {
-                    $data = json_decode($content);
-                    if ($data) {
-                        $content = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-                        $add = ' FORMATTED';
-                    }
-                }
-                $title = '['.$response->getStatusCode().']'.$add.' - '.$content;
-            } else {
-                $title = $crawler->filter('title')->text();
-            }
-        } catch (\Exception $e) {
-            $title = $e->getMessage();
-        }
-
-        return trim($title);
     }
 
     public function assertResponseRedirect(?Response $response = null, ?string $message = null, string $type = 'text/html')
@@ -85,13 +62,43 @@ abstract class AbstractTest extends WebTestCase
         $this->failOnResponseStatusCheck($response, $expectedCode, $message, $type);
     }
 
+    /**
+     * @return string
+     */
+    public function guessErrorMessageFromResponse(Response $response, string $type = 'text/html')
+    {
+        try {
+            $crawler = new Crawler();
+            $crawler->addContent($response->getContent(), $type);
+
+            if (!\count($crawler->filter('title'))) {
+                $add = '';
+                $content = $response->getContent();
+
+                if ('application/json' === $response->headers->get('Content-Type')) {
+                    $data = json_decode($content);
+                    if ($data) {
+                        $content = json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+                        $add = ' FORMATTED';
+                    }
+                }
+                $title = '[' . $response->getStatusCode() . ']' . $add . ' - ' . $content;
+            } else {
+                $title = $crawler->filter('title')->text();
+            }
+        } catch (\Exception $e) {
+            $title = $e->getMessage();
+        }
+
+        return trim($title);
+    }
+
     protected static function getClient($reinitialize = false, array $options = [], array $server = [])
     {
         if (!static::$client || $reinitialize) {
             static::$client = static::createClient($options, $server);
         }
 
-        // core is loaded (for tests without calling of getClient(true))
         static::$client->getKernel()->boot();
 
         return static::$client;
@@ -121,18 +128,7 @@ abstract class AbstractTest extends WebTestCase
         $executor = new ORMExecutor($em, $purger);
         $executor->execute($loader->getFixtures());
     }
-
-    /**
-     * Shortcut.
-     */
-    protected static function getEntityManager()
-    {
-        return static::getContainer()->get('doctrine')->getManager();
-    }
-
-    /**
-     * List of fixtures for certain test.
-     */
+    
     protected function getFixtures(): array
     {
         return [];
@@ -140,7 +136,7 @@ abstract class AbstractTest extends WebTestCase
 
     private function failOnResponseStatusCheck(
         Response $response = null,
-                 $func = null,
+        $func = null,
         ?string $message = null,
         string $type = 'text/html'
     ) {
@@ -166,7 +162,7 @@ abstract class AbstractTest extends WebTestCase
 
         $err = $this->guessErrorMessageFromResponse($response, $type);
         if ($message) {
-            $message = rtrim($message, '.').'. ';
+            $message = rtrim($message, '.') . '. ';
         }
 
         if (is_int($func)) {
@@ -180,10 +176,10 @@ abstract class AbstractTest extends WebTestCase
 
         $max_length = 100;
         if (mb_strlen($err, 'utf-8') < $max_length) {
-            $message .= ' '.$this->makeErrorOneLine($err);
+            $message .= ' ' . $this->makeErrorOneLine($err);
         } else {
-            $message .= ' '.$this->makeErrorOneLine(mb_substr($err, 0, $max_length, 'utf-8').'...');
-            $message .= "\n\n".$err;
+            $message .= ' ' . $this->makeErrorOneLine(mb_substr($err, 0, $max_length, 'utf-8') . '...');
+            $message .= "\n\n" . $err;
         }
 
         $this->fail($message);
