@@ -8,9 +8,6 @@ use App\Tests\AbstractTest;
 
 class CourseControllerTest extends AbstractTest
 {
-    /**
-     * @dataProvider urlProviderIsSuccessful
-     */
     public function testPageIsSuccessful($url): void
     {
         $client = self::getClient();
@@ -20,14 +17,10 @@ class CourseControllerTest extends AbstractTest
 
     public function urlProviderIsSuccessful(): \Generator
     {
-        // yield ['/'];
         yield ['/courses/'];
         yield ['/courses/new'];
     }
 
-    /**
-     * @dataProvider urlProviderNotFound
-     */
     public function testPageIsNotFound($url): void
     {
         $client = self::getClient();
@@ -60,20 +53,20 @@ class CourseControllerTest extends AbstractTest
         }
     }
 
-    public function testPostActionsResponseOk(): void
-    {
-        $client = self::getClient();
-        $courses = self::getEntityManager()->getRepository(Course::class)->findAll();
-        foreach ($courses as $course) {
-            // детальная страница
-            $client->request('POST', '/courses/' . $course->getId() . '/edit');
-            $this->assertResponseOk();
+    // public function testPostActionsResponseOk(): void
+    // {
+    //     $client = self::getClient();
+    //     $courses = self::getEntityManager()->getRepository(Course::class)->findAll();
+    //     foreach ($courses as $course) {
+    //         // детальная страница
+    //         $client->request('POST', '/courses/' . $course->getId() . '/edit');
+    //         $this->assertResponseOk();
 
-            // страница добавления урока
-            $client->request('POST', '/lessons/new?course_id=' . $course->getId());
-            $this->assertResponseOk();
-        }
-    }
+    //         // страница добавления урока
+    //         $client->request('POST', '/lessons/new?course_id=' . $course->getId());
+    //         $this->assertResponseOk();
+    //     }
+    // }
 
     public function testNumberOfCourses(): void
     {

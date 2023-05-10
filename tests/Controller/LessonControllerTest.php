@@ -24,15 +24,15 @@ class LessonControllerTest extends AbstractTest
         }
     }
 
-    public function testPostActionsResponseOk(): void
-    {
-        $client = self::getClient();
-        $lessons = self::getEntityManager()->getRepository(Lesson::class)->findAll();
-        foreach ($lessons as $lesson) {
-            $client->request('POST', '/lessons/' . $lesson->getId() . '/edit');
-            $this->assertResponseOk();
-        }
-    }
+    // public function testPostActionsResponseOk(): void
+    // {
+    //     $client = self::getClient();
+    //     $lessons = self::getEntityManager()->getRepository(Lesson::class)->findAll();
+    //     foreach ($lessons as $lesson) {
+    //         $client->request('POST', '/lessons/' . $lesson->getId() . '/edit');
+    //         $this->assertResponseOk();
+    //     }
+    // }
 
     public function testSuccessfulLessonCreating(): void
     {

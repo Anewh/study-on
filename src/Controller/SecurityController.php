@@ -2,26 +2,29 @@
 
 namespace App\Controller;
 
+use App\Exception\CustomUserMessageAuthenticationException;
+use App\Tests\Mock\BillingClientMock;
 use Exception;
 use App\Security\User;
 use App\Form\RegisterForm;
 use App\Service\BillingClient;
 use App\Security\BillingAuthenticator;
-use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 use Symfony\Component\Security\Http\Authentication\AuthenticationUtils;
 use Symfony\Component\Security\Http\Authentication\UserAuthenticatorInterface;
-use Symfony\Component\Security\Core\Exception\CustomUserMessageAuthenticationException;
 use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
+return [
+    'token' => $token
+];
 class SecurityController extends AbstractController
 {
     private BillingClient $billingClient;
-    public function __construct(BillingClient $billingClient, Security $security)
+    public function __construct(BillingClient $billingClient)
     {
         $this->billingClient = $billingClient;
     }

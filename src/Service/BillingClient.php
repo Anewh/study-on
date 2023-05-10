@@ -2,17 +2,10 @@
 
 namespace App\Service;
 
-use App\Dto\CourseDto;
 use App\Dto\UserDto;
 use App\Exception\BillingUnavailableException;
-use App\Exception\CourseAlreadyPaidException;
-use App\Exception\InsufficientFundsException;
-use App\Exception\ResourceAlreadyExistsException;
-use App\Exception\ResourceNotFoundException;
 use JMS\Serializer\Serializer;
 use JMS\Serializer\SerializerBuilder;
-use JsonException;
-use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
 use Symfony\Component\Security\Core\Exception\CustomUserMessageAuthenticationException;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
@@ -31,7 +24,7 @@ class BillingClient
         $this->validator = $validator;
         $this->serializer = SerializerBuilder::create()->build();
     }
-
+    
     public function auth(array $credentials): array
     {
         $response = $this->jsonRequest(
@@ -45,7 +38,7 @@ class BillingClient
             throw new UnauthorizedHttpException('Неправильные логин или пароль');
         }
         if ($response['code'] >= 400) {
-            throw new BillingUnavailableException();
+            throw new BillingUnavailableException('Сервис временно недоступен');
         }
         return $this->parseJsonResponse($response);
     }
@@ -60,18 +53,16 @@ class BillingClient
         );
 
         if ($response['code'] === 409) {
-            throw new CustomUserMessageAuthenticationException('Пользователь с указанным email уже существует!');
+            throw new CustomUserMessageAuthenticationException('Пользователь с указанным email уже существует');
         }
         if ($response['code'] >= 400) {
-            throw new BillingUnavailableException('Сервис временно недоступен. Попробуйте авторизоваться позднее');
+            throw new BillingUnavailableException('Сервис временно недоступен. Попробуйте зарегистрироваться позднее');
         }
-
         return $this->parseJsonResponse($response);
     }
 
     public function getCurrentUser(string $token): UserDto
-    {
-        
+    {   
         $response = $this->jsonRequest(
             self::GET,
             '/users/current',
@@ -103,19 +94,6 @@ class BillingClient
         }
         return $this->serializer->deserialize($response['body'], $type, 'json');
     }
-
-    // protected function jsonRequest(
-    //     string $method,
-    //     string $path,
-    //     array  $parameters = [],
-    //     $data = [],
-    //     array  $headers = []
-    // ): array {
-    //     $headers['Accept'] = 'application/json';
-    //     $headers['Content-Type'] = 'application/json';
-    
-    //     return $this->request($method, $path, $parameters, $this->serializer->serialize($data, 'json'), $headers);
-    // }
 
     protected function jsonRequest(
         string       $method,
