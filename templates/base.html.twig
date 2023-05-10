@@ -1,26 +1,71 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="UTF-8">
-        <title>{% block title %}Study on{% endblock %}</title>
-        <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text></svg>">
-        {# Run `composer require symfony/webpack-encore-bundle` to start using Symfony UX #}
-        {% block stylesheets %}
-            {{ encore_entry_link_tags('app') }}
-        {% endblock %}
+	<head>
+		<meta charset="UTF-8">
+		<title>
+			{% block title %}Study on
+			{% endblock %}
+		</title>
+		<link
+		rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 128 128%22><text y=%221.2em%22 font-size=%2296%22>⚫️</text></svg>">
+		{# Run `composer require symfony/webpack-encore-bundle` to start using Symfony UX #}
+		{% block stylesheets %}
+			{{ encore_entry_link_tags('app') }}
+		{% endblock %}
 
-        {% block javascripts %}
-            {{ encore_entry_script_tags('app') }}
-        {% endblock %}
-    </head>
-    <body>
-        <header class="navbar navbar-expand-lg bg-body-tertiary p-3 px-6 mb-4">
-          <div class="container-fluid">
-            <a class="navbar-brand mb-0 h1" href="{{ path('app_course_index') }}">StudyOn</a>
-
-        </header>
-        <div class="container-fluid px-5">
-            {% block body %}{% endblock %}
-        </div>
-    </body>
-</html>
+		{% block javascripts %}
+			{{ encore_entry_script_tags('app') }}
+		{% endblock %}
+	</head>
+	<body>
+		<header class="navbar navbar-expand-lg bg-body-tertiary p-3 px-6 mb-4">
+			<div class="container">
+				<nav class="navbar navbar-expand-lg bg-body-tertiary">
+					<div class="container-fluid">
+						<a class="navbar-brand" href="{{ path('app_course_index') }}">StudyOn</a>
+					</div>
+				</nav>
+			</div>
+			<div class="collapse navbar-collapse d-flex justify-content-end">
+				<ul
+					class="navbar-nav d-flex justify-content-end">
+					{% if app.user %}
+						<div class="d-flex justify-content-end">
+							<li class="nav-item" style="margin-right: 10px;">
+								<h4 class="m-md-0">
+									Привет,
+									{{ app.user.email }}
+								</h4>
+							</li>
+							<li class="nav-item">
+								<a href="{{ path('app_profile_show') }}" class="btn btn-primary">
+									Профиль
+								</a>
+							</li>
+							<li class="nav-item">
+								<a href="{{ path('app_logout') }}" class="btn btn-outline-primary ms-2">
+									Выход
+								</a>
+							</li>
+						{% else %}
+							<li class="nav-item">
+								<a href="{{ path('app_login') }}" class="btn btn-primary">
+									Вход
+								</a>
+							</li>
+							<li class="nav-item">
+								<a href="{{ path('app_register') }}" class="btn btn-outline-primary ms-2">
+									Регистрация
+								</a>
+							</li>
+							{# </div> #}
+						{% endif %}
+					</ul>
+					{# </div> #}
+				</header>
+				<div class="container-fluid px-5"> {% block body %}{% endblock %}
+					</div>
+				</body>
+			</body>
+		</body>
+	</html>

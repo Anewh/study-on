@@ -10,8 +10,11 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Security\Core\Exception\AccessDeniedException;
+use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/lessons')]
+#[IsGranted('ROLE_USER')]
 class LessonController extends AbstractController
 {
     #[Route('/', name: 'app_lesson_index', methods: ['GET'])]
@@ -23,6 +26,7 @@ class LessonController extends AbstractController
     }
 
     #[Route('/new', name: 'app_lesson_new', methods: ['GET', 'POST'])]
+    #[IsGranted('ROLE_SUPER_ADMIN')]
     public function new(Request $request, LessonRepository $lessonRepository, CourseRepository $courseRepository): Response
     {
         $courseId = (int)$request->query->get('course_id');
@@ -44,7 +48,7 @@ class LessonController extends AbstractController
             );
         }
 
-        return $this->renderForm('lesson/new.html.twig', [
+        return $this->render('lesson/new.html.twig', [
             'lesson' => $lesson,
             'form' => $form,
         ]);
@@ -59,6 +63,7 @@ class LessonController extends AbstractController
     }
 
     #[Route('/{id}/edit', name: 'app_lesson_edit', methods: ['GET', 'POST'])]
+    #[IsGranted('ROLE_SUPER_ADMIN')]
     public function edit(Request $request, Lesson $lesson, LessonRepository $lessonRepository): Response
     {
         $form = $this->createForm(LessonType::class, $lesson, ['course_id' => $lesson->getCourse()->getId()]);
@@ -74,13 +79,14 @@ class LessonController extends AbstractController
             );
         }
 
-        return $this->renderForm('lesson/edit.html.twig', [
+        return $this->render('lesson/edit.html.twig', [
             'lesson' => $lesson,
             'form' => $form,
         ]);
     }
 
     #[Route('/{id}', name: 'app_lesson_delete', methods: ['POST'])]
+    #[IsGranted('ROLE_SUPER_ADMIN')]
     public function delete(Request $request, Lesson $lesson, LessonRepository $lessonRepository): Response
     {
         if ($this->isCsrfTokenValid('delete'.$lesson->getId(), $request->request->get('_token'))) {

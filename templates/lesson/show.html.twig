@@ -10,17 +10,24 @@
 		<a class='course' href="{{ path('app_course_show', {'id': lesson.course.id}) }}">{{ lesson.course.name }}</a>
 	</h5>
 
-    <div class="d-flex flex-row gap-1 mt-3">
-		<a class="btn btn-outline-secondary" href="{{ path('app_lesson_edit', {'id': lesson.id}) }}">
-			Редактировать
-		</a>
-		{{ include('lesson/_delete_form.html.twig') }}
-	</div>
-
-    <div class="accordion card mt-2 p-3">         
-        {% for line in lesson.content|split("\n") %}         
-            <div class="content">{{ line }}</div>         
-        {% endfor %}         
-    </div>
+	{% if is_granted("ROLE_SUPER_ADMIN") %}
+		<div class="d-flex flex-row gap-1 mt-3">
+			<a class="btn btn-outline-secondary" href="{{ path('app_lesson_edit', {'id': lesson.id}) }}">
+				Редактировать
+			</a>
+			{{ include('lesson/_delete_form.html.twig') }}
+		</div>
+	{% endif %}
+	{% if is_granted("ROLE_USER") %}
+		<div class="accordion card mt-2 p-3">
+			{% for line in lesson.content|split("\n") %}
+				<div class="content">{{ line }}</div>
+			{% endfor %}
+		</div>
+		{% else %}
+		<div class="accordion card mt-2 p-3">
+			<div class="content">Для просмотра содержимого уроков необходимо авторизоваться</div>
+		</div>
+	{% endif %}
 
 {% endblock %}

@@ -1,0 +1,16 @@
+{% extends 'base.html.twig' %}
+	{% block title %}Регистрация/StudyOn
+	{% endblock %}
+
+	{% block body %}
+		<div class="container " style="max-width: 500px;">
+			{% if error %}
+				<div class="alert alert-danger">{{ error }}</div>
+			{% endif %}
+			<h3>Регистрация</h3>
+			{{ form_start(registerForm) }}
+        	{{ form_widget(registerForm) }}
+			<button type="submit" class="btn btn-primary">Зарегистрироваться</button>
+        	{{ form_end(registerForm) }}
+		</div>
+{% endblock %}

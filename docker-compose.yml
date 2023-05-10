@@ -39,4 +39,9 @@ services:
     user: ${UID:-1000}:${GID:-1000}
     volumes:
       - ${PWD}:/app
-      - ${HOME}/.yarn:/yarn
+      - ${HOME}/.yarn:/yarn     
+networks:
+  default:
+    external:
+      name: study-onbilling_default
+

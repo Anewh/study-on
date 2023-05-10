@@ -6,6 +6,7 @@ use App\Repository\CourseRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\ORM\Mapping as ORM;
+use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: CourseRepository::class)]
 class Course
@@ -16,12 +17,30 @@ class Course
     private ?int $id = null;
 
     #[ORM\Column(length: 255, unique:true)]
+    #[Assert\Length(
+        max: 255,
+        maxMessage: 'Символьный код не должен превышать 255 символов'
+    )]
+    #[Assert\NotBlank(
+        message: "Символьный код не может быть пустым"
+    )]
     private ?string $code = null;
 
     #[ORM\Column(length: 255)]
+    #[Assert\Length(
+        max: 255,
+        maxMessage: 'Название курса не должно превышать 255 символов'
+    )]
+    #[Assert\NotBlank(
+        message: "Название не может быть пустым"
+    )]
     private ?string $name = null;
 
     #[ORM\Column(length: 1000, nullable: true)]
+    #[Assert\Length(
+        max: 255,
+        maxMessage: 'Краткое описание курса не должно превышать 1000 символов'
+    )]
     private ?string $description = null;
 
     #[ORM\OneToMany(mappedBy: 'course', targetEntity: Lesson::class, cascade: ['persist'], orphanRemoval: true)]

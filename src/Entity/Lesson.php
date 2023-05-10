@@ -16,15 +16,25 @@ class Lesson
     private ?int $id = null;
 
     #[ORM\Column(length: 255)]
+    #[Assert\Length(
+        max: 255,
+        maxMessage: 'Название урока не должно превышать {{ limit }} символов'
+    )]
+    #[Assert\NotBlank(
+        message: "Название урока не может быть пустым"
+    )]
     private ?string $name = null;
 
     #[ORM\Column(type: Types::TEXT)]
+    #[Assert\NotBlank(
+        message: "Содержимое урока не может быть пустым"
+    )]
     private ?string $content = null;
 
     #[ORM\Column(type: Types::SMALLINT, nullable: true)]
     #[Assert\Length(
         max: 10000,
-        maxMessage: 'Serial number must be limited by {{ limit }}',
+        maxMessage: 'Порядковый номер урока не может быть более, чем {{ limit }}',
     )]
     private ?int $serial = null;
 
