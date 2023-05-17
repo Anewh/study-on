@@ -6,10 +6,14 @@ use App\DataFixtures\AppFixtures;
 use App\Entity\Course;
 use App\Entity\Lesson;
 use App\Tests\AbstractTest;
+use App\Tests\Mock\BillingClientMock;
 use App\Tests\Utils\AuthAdmin;
+use JMS\Serializer\SerializerInterface;
 
 class CourseControllerTest extends AbstractTest
 {
+    private SerializerInterface $serializer;
+    
     /**
      * @dataProvider urlProviderIsSuccessful
      */
@@ -25,6 +29,11 @@ class CourseControllerTest extends AbstractTest
         yield ['/courses/'];
         //  yield ['/courses/new'];
     }
+
+    const USER_CREDENTIALS = [
+        'username' => 'user@example.com',
+        'password' => 'password'
+    ];
 
     /**
      * @dataProvider urlProviderNotFound
@@ -61,6 +70,40 @@ class CourseControllerTest extends AbstractTest
             $client->request('GET', '/lessons/new?course_id=' . $course->getId());
             $this->assertResponseOk();
         }
+    }
+
+    public function testUserAccessToCourses(): void
+    {
+        $client = $this->billingClient();
+        $courses = self::getEntityManager()->getRepository(Course::class)->findAll();
+
+        // анону недоступны страницы создания и редактирования курсов. Редиректит на страницу авторизации
+        $crawler = $client->request('GET', '/courses/new');
+        $this->assertResponseRedirect();
+
+        $crawler = $client->request('GET', '/courses/' . $courses[0]->getId() .'/edit');
+        $this->assertResponseRedirect();
+
+        // обычному недоступны страницы создания и редактирования курсов
+        // обычный пользователь входит на сайт
+        $crawler = $client->request('GET', '/');
+        $crawler = $client->followRedirect();
+        $link = $crawler->selectLink('Вход')->link();
+        $crawler = $client->click($link);
+        $this->assertResponseOk();
+        
+        $submitBtn = $crawler->selectButton('Войти');
+        $login = $submitBtn->form([
+            'email' => self::USER_CREDENTIALS['username'],
+            'password' => self::USER_CREDENTIALS['password'],
+        ]);
+        $client->submit($login);
+        $crawler = $client->request('GET', '/courses/new');
+        $this->assertResponseCode(403);
+
+        $crawler = $client->request('GET', '/courses/' . $courses[0]->getId() .'/edit');
+        $this->assertResponseCode(403);
+
     }
 
     public function testNumberOfCourses(): void
@@ -339,6 +382,22 @@ class CourseControllerTest extends AbstractTest
         self::assertCount($coursesCountAfterDelete, $crawler->filter('.card-body'));
     }
 
+    private function billingClient()
+    {
+        // по какой-то невероятной причине у меня этот способ работает корректно, а предложенный в доке - нет
+        $client = static::createClient();
+        $client->disableReboot();
+        self::$client = $client;
+        // обязательно нужно вынести контейнер в отдельную переменную
+        $container = static::getContainer();
+        $this->serializer = $container->get(SerializerInterface::class);
+
+        $container->set(BillingClient::class,
+           new BillingClientMock($this->serializer));
+
+        return $client;
+    }
+
     protected function getFixtures(): array
     {
         return [AppFixtures::class];
@@ -349,4 +408,5 @@ class CourseControllerTest extends AbstractTest
         $auth = new AuthAdmin();
         return $auth->auth();
     }
+    
 }

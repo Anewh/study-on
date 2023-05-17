@@ -11,12 +11,12 @@ use Symfony\Component\Panther\PantherTestCase;
 
 class SecurityControllerTest extends AbstractTest
 {
-    private SerializerInterface $serializer;
-
     const USER_CREDENTIALS = [
         'username' => 'admin@example.com',
         'password' => 'password'
     ];
+
+    private SerializerInterface $serializer;
 
     private function billingClient()
     {

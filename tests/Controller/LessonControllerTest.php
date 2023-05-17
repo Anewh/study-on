@@ -6,11 +6,18 @@ use App\DataFixtures\AppFixtures;
 use App\Entity\Course;
 use App\Entity\Lesson;
 use App\Tests\AbstractTest;
+use App\Tests\Mock\BillingClientMock;
 use App\Tests\Utils\AuthAdmin;
 use JMS\Serializer\SerializerInterface;
 
 class LessonControllerTest extends AbstractTest
 {
+    const USER_CREDENTIALS = [
+        'username' => 'user@example.com',
+        'password' => 'password'
+    ];
+
+    private SerializerInterface $serializer;
 
     public function testGetActionsResponseOk(): void
     {
@@ -25,6 +32,48 @@ class LessonControllerTest extends AbstractTest
             $client->request('GET', '/lessons/' . $lesson->getId() . '/edit');
             $this->assertResponseOk();
         }
+    }
+
+    public function testUserAccessToCourses(): void
+    {
+        $client = $this->billingClient();
+        $courses = self::getEntityManager()->getRepository(Course::class)->findAll();
+        $lessons = self::getEntityManager()->getRepository(Lesson::class)->findBy(['course' => $courses[0]]);
+
+        // анон не может смотреть уроки
+        $crawler = $client->request('GET', '/lessons/' . $lessons[0]->getId());
+        $this->assertResponseRedirect();
+
+        // анон не может редактировать уроки
+        $crawler = $client->request('GET', '/lessons/' . $lessons[0]->getId() . '/edit');
+        $this->assertResponseRedirect();
+
+        // анон не может создавать уроки
+        $crawler = $client->request('GET', '/lessons/new');
+        $this->assertResponseRedirect();
+
+        // обычному недоступны страницы создания и редактирования уроков
+        $crawler = $client->request('GET', '/');
+        $crawler = $client->followRedirect();
+        $link = $crawler->selectLink('Вход')->link();
+        $crawler = $client->click($link);
+        $this->assertResponseOk();
+        
+        $submitBtn = $crawler->selectButton('Войти');
+        $login = $submitBtn->form([
+            'email' => self::USER_CREDENTIALS['username'],
+            'password' => self::USER_CREDENTIALS['password'],
+        ]);
+        $client->submit($login);
+
+        // обычный пользователь не может редактировать уроки
+        $crawler = $client->request('GET', '/lessons/' . $lessons[0]->getId() . '/edit');
+        $this->assertResponseCode(403);
+
+        // обычный пользователь не может создавать уроки
+        $crawler = $client->request('GET', '/lessons/new');
+        $this->assertResponseCode(403);
+
     }
 
     public function testSuccessfulLessonCreating(): void
@@ -269,5 +318,21 @@ class LessonControllerTest extends AbstractTest
     {
         $auth = new AuthAdmin();
         return $auth->auth();
+    }
+
+    private function billingClient()
+    {
+        // по какой-то невероятной причине у меня этот способ работает корректно, а предложенный в доке - нет
+        $client = static::createClient();
+        $client->disableReboot();
+        self::$client = $client;
+        // обязательно нужно вынести контейнер в отдельную переменную
+        $container = static::getContainer();
+        $this->serializer = $container->get(SerializerInterface::class);
+
+        $container->set(BillingClient::class,
+           new BillingClientMock($this->serializer));
+
+        return $client;
     }
 }
