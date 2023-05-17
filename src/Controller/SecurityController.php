@@ -2,8 +2,7 @@
 
 namespace App\Controller;
 
-use App\Exception\CustomUserMessageAuthenticationException;
-use App\Tests\Mock\BillingClientMock;
+use App\Exception\BillingUnavailableException;
 use Exception;
 use App\Security\User;
 use App\Form\RegisterForm;
@@ -18,9 +17,6 @@ use Symfony\Component\Security\Http\Attribute\CurrentUser;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
-return [
-    'token' => $token
-];
 class SecurityController extends AbstractController
 {
     private BillingClient $billingClient;
@@ -32,9 +28,11 @@ class SecurityController extends AbstractController
     #[Route(path: '/login', name: 'app_login')]
     public function login(AuthenticationUtils $authenticationUtils): Response
     {
-        // get the login error if there is one
+        if ($this->getUser()) {
+            return $this->redirectToRoute('app_course_index');
+        }
+
         $error = $authenticationUtils->getLastAuthenticationError();
-        // last username entered by the user
         $lastUsername = $authenticationUtils->getLastUsername();
 
         return $this->render('security/login.html.twig', ['last_username' => $lastUsername, 'error' => $error]);
@@ -43,18 +41,23 @@ class SecurityController extends AbstractController
     #[Route(path: '/logout', name: 'app_logout')]
     public function logout(): void
     {
-        throw new \LogicException('This method can be blank - it will be intercepted by the logout key on your firewall.');
     }
 
     #[Route(path: '/profile', name: 'app_profile_show')]
     #[IsGranted('ROLE_USER')]
     public function profile(#[CurrentUser] ?User $user): Response
     {
-        $user = $this->billingClient->getCurrentUser($user->getApiToken());
+        try {
+            $user = $this->billingClient->getCurrentUser($user->getApiToken());
 
-        return $this->render('profile/show.html.twig', [
-            'user' => $user,
-        ]);
+            return $this->render('profile/show.html.twig', [
+                'user' => $user,
+            ]);
+        } catch (BillingUnavailableException | \JsonException $e) {
+            $this->addFlash('error', $e->getMessage());
+
+            return $this->redirectToRoute('app_course_index');
+        }
     }
 
     #[Route('/register', name: 'app_register')]
@@ -80,10 +83,10 @@ class SecurityController extends AbstractController
                     'password' => $form->get('password')->getData()
                 ])['token'];
             } catch (Exception $e) {
-                if ($e instanceof CustomUserMessageAuthenticationException) {
-                    $error = $e->getMessage();
+                if ($e instanceof  BillingUnavailableException) {
+                    $error = 'Сервис временно недоступен. Попробуйте зайти позже';
                 } else {
-                    $error = 'Сервис временно недоступен. Попробуйте авторизоваться позднее';
+                    $error = $e->getMessage();
                 }
                 return $this->render('security/register.html.twig', [
                     'registerForm' => $form->createView(),

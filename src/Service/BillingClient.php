@@ -5,37 +5,35 @@ namespace App\Service;
 use App\Dto\UserDto;
 use App\Exception\BillingUnavailableException;
 use JMS\Serializer\Serializer;
-use JMS\Serializer\SerializerBuilder;
+use JMS\Serializer\SerializerInterface;
 use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
 use Symfony\Component\Security\Core\Exception\CustomUserMessageAuthenticationException;
-use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class BillingClient
 {
     protected const GET = 'GET';
     protected const POST = 'POST';
     private string $host;
-    private ValidatorInterface $validator;
     private Serializer $serializer;
 
-    public function __construct(ValidatorInterface $validator, string $host)
+    public function __construct(SerializerInterface $serializer)
     {
-        $this->host = $host;
-        $this->validator = $validator;
-        $this->serializer = SerializerBuilder::create()->build();
+        $this->host = $_ENV['BILLING_HOST'];
+
+        $this->serializer = $serializer;
     }
-    
+
     public function auth(array $credentials): array
     {
+
         $response = $this->jsonRequest(
             self::POST,
             '/auth',
             [],
             $credentials
         );
-        
         if ($response['code'] === 401) {
-            throw new UnauthorizedHttpException('Неправильные логин или пароль');
+            throw new BillingUnavailableException('Неправильные логин или пароль');
         }
         if ($response['code'] >= 400) {
             throw new BillingUnavailableException('Сервис временно недоступен');
@@ -62,7 +60,7 @@ class BillingClient
     }
 
     public function getCurrentUser(string $token): UserDto
-    {   
+    {
         $response = $this->jsonRequest(
             self::GET,
             '/users/current',
@@ -70,24 +68,20 @@ class BillingClient
             [],
             ['Authorization' => 'Bearer ' . $token]
         );
-        
+
         if ($response['code'] === 401) {
             throw new UnauthorizedHttpException('Необходимо войти заново');
         }
-        
+
         if ($response['code'] >= 400) {
             throw new BillingUnavailableException();
         }
 
         $userDto = $this->parseJsonResponse($response, UserDto::class);
-        $errors = $this->validator->validate($userDto);
-        if (count($errors) > 0) {
-            throw new BillingUnavailableException('User data is not valid');
-        }
         return $userDto;
     }
 
-    protected function parseJsonResponse(array $response, ?string $type = null)
+    private function parseJsonResponse(array $response, ?string $type = null)
     {
         if (null === $type) {
             return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);
@@ -95,12 +89,12 @@ class BillingClient
         return $this->serializer->deserialize($response['body'], $type, 'json');
     }
 
-    protected function jsonRequest(
-        string       $method,
-        string       $path,
-        array        $parameters = [],
+    private function jsonRequest(
+        string $method,
+        string $path,
+        array $parameters = [],
         $data = [],
-        array        $headers = []
+        array $headers = []
     ): array {
 
         $headers['Accept'] = 'application/json';
@@ -116,7 +110,7 @@ class BillingClient
             }
             $path .= implode('&', $newParameters);
         }
-        
+
         $ch = curl_init($this->host . $path);
 
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);

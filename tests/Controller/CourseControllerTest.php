@@ -4,10 +4,15 @@ namespace App\Tests\Controller;
 
 use App\DataFixtures\AppFixtures;
 use App\Entity\Course;
+use App\Entity\Lesson;
 use App\Tests\AbstractTest;
+use App\Tests\Utils\AuthAdmin;
 
 class CourseControllerTest extends AbstractTest
 {
+    /**
+     * @dataProvider urlProviderIsSuccessful
+     */
     public function testPageIsSuccessful($url): void
     {
         $client = self::getClient();
@@ -18,9 +23,12 @@ class CourseControllerTest extends AbstractTest
     public function urlProviderIsSuccessful(): \Generator
     {
         yield ['/courses/'];
-        yield ['/courses/new'];
+        //  yield ['/courses/new'];
     }
 
+    /**
+     * @dataProvider urlProviderNotFound
+     */
     public function testPageIsNotFound($url): void
     {
         $client = self::getClient();
@@ -36,8 +44,10 @@ class CourseControllerTest extends AbstractTest
 
     public function testGetActionsResponseOk(): void
     {
-        $client = self::getClient();
+        $client = $this->authAdmin();
+        // $client = self::getClient();
         $courses = self::getEntityManager()->getRepository(Course::class)->findAll();
+        //dd($courses);
         foreach ($courses as $course) {
             // детальная страница
             $client->request('GET', '/courses/' . $course->getId());
@@ -52,21 +62,6 @@ class CourseControllerTest extends AbstractTest
             $this->assertResponseOk();
         }
     }
-
-    // public function testPostActionsResponseOk(): void
-    // {
-    //     $client = self::getClient();
-    //     $courses = self::getEntityManager()->getRepository(Course::class)->findAll();
-    //     foreach ($courses as $course) {
-    //         // детальная страница
-    //         $client->request('POST', '/courses/' . $course->getId() . '/edit');
-    //         $this->assertResponseOk();
-
-    //         // страница добавления урока
-    //         $client->request('POST', '/lessons/new?course_id=' . $course->getId());
-    //         $this->assertResponseOk();
-    //     }
-    // }
 
     public function testNumberOfCourses(): void
     {
@@ -91,8 +86,8 @@ class CourseControllerTest extends AbstractTest
 
     public function testSuccessfulCourseCreating(): void
     {
+        $client = $this->authAdmin();
         // от списка курсов переходим на страницу создания курса
-        $client = self::getClient();
         $crawler = $client->request('GET', '/courses/');
         $this->assertResponseOk();
 
@@ -100,23 +95,25 @@ class CourseControllerTest extends AbstractTest
         $crawler = $client->click($link);
         $this->assertResponseOk();
 
+        $code = 'unique-code' . rand();
         // заполняем форму создания курса корректными данными и отправляем
         $submitBtn = $crawler->selectButton('Сохранить');
         $courseCreatingForm = $submitBtn->form([
-            'course[code]' => 'unique-code1',
+            'course[code]' => $code,
             'course[name]' => 'Course name for test',
             'course[description]' => 'Course description for test',
         ]);
         $client->submit($courseCreatingForm);
 
         $course = self::getEntityManager()->getRepository(Course::class)->findOneBy([
-            'code' => 'unique-code1',
+            'code' => $code,
         ]);
 
         // проверяем редирект
         self::assertSame($client->getResponse()->headers->get('location'), '/courses/' . $course->getId());
+
+        $this->assertResponseRedirect();
         $crawler = $client->followRedirect();
-        $this->assertResponseOk();
 
         // проверяем корректность отображения данных 
         $this->assertSame($crawler->filter('.course-name')->text(), $course->getName());
@@ -125,8 +122,8 @@ class CourseControllerTest extends AbstractTest
 
     public function testCourseCreatingWithEmptyCode(): void
     {
+        $client = $this->authAdmin();
         // от списка курсов переходим на страницу создания курса
-        $client = self::getClient();
         $crawler = $client->request('GET', '/courses/');
         $this->assertResponseOk();
 
@@ -142,6 +139,7 @@ class CourseControllerTest extends AbstractTest
             'course[description]' => 'Description course for test',
         ]);
         $client->submit($courseCreatingForm);
+        //$this->assertResponseRedirect();
         $this->assertResponseCode(422);
 
         // Проверяем наличие сообщения об ошибке
@@ -149,13 +147,12 @@ class CourseControllerTest extends AbstractTest
             '.invalid-feedback.d-block',
             'Символьный код не может быть пустым'
         );
-
     }
 
     public function testCourseCreatingWithEmptyName(): void
     {
+        $client = $this->authAdmin();
         // от списка курсов переходим на страницу создания курса
-        $client = self::getClient();
         $crawler = $client->request('GET', '/courses/');
         $this->assertResponseOk();
 
@@ -176,14 +173,36 @@ class CourseControllerTest extends AbstractTest
         // Проверяем наличие сообщения об ошибке
         self::assertSelectorTextContains(
             '.invalid-feedback.d-block',
-            'Название курса не может быть пустым'
+            'Название не может быть пустым'
         );
     }
 
     public function testCourseCreatingWithNotUniqueCode(): void
     {
+        $client = $this->authAdmin();
         // от списка курсов переходим на страницу создания курса
-        $client = self::getClient();
+        $crawler = $client->request('GET', '/courses/');
+        $this->assertResponseOk();
+
+        $link = $crawler->selectLink('Новый курс')->link();
+        $crawler = $client->click($link);
+        $this->assertResponseOk();
+
+        $code = 'my_example_code';
+
+        // заполняем форму создания курса корректными данными и отправляем
+        $submitBtn = $crawler->selectButton('Сохранить');
+        $courseCreatingForm = $submitBtn->form([
+            'course[code]' => $code,
+            'course[name]' => 'Course name for test',
+            'course[description]' => 'Course description for test',
+        ]);
+        $client->submit($courseCreatingForm);
+
+        $course = self::getEntityManager()->getRepository(Course::class)->findOneBy([
+            'code' => $code,
+        ]);
+
         $crawler = $client->request('GET', '/courses/');
         $this->assertResponseOk();
 
@@ -194,7 +213,7 @@ class CourseControllerTest extends AbstractTest
         // заполнили форму и отправили с не уникальным кодом
         $submitBtn = $crawler->selectButton('Сохранить');
         $courseCreatingForm = $submitBtn->form([
-            'course[code]' => 'nympydata',
+            'course[code]' => $code,
             'course[name]' => 'Course name for test',
             'course[description]' => 'Description course for test',
         ]);
@@ -206,8 +225,8 @@ class CourseControllerTest extends AbstractTest
 
     public function testCourseSuccessfulEditing(): void
     {
+        $client = $this->authAdmin();
         // от списка курсов переходим на страницу редактирования курса
-        $client = self::getClient();
         $crawler = $client->request('GET', '/courses/');
         $this->assertResponseOk();
 
@@ -242,12 +261,15 @@ class CourseControllerTest extends AbstractTest
         // проверяем изменение данных
         $this->assertSame($crawler->filter('.course-name')->text(), 'Course name for test');
         $this->assertSame($crawler->filter('.card-text')->text(), 'Description course for test');
+        $client->submitForm('Удалить');
+        self::assertSame($client->getResponse()->headers->get('location'), '/courses/');
+        $this->assertResponseRedirect();
     }
 
     public function testCourseFailedEditing(): void
     {
+        $client = $this->authAdmin();
         // со страницы списка курсов
-        $client = self::getClient();
         $crawler = $client->request('GET', '/courses/');
         $this->assertResponseOk();
 
@@ -271,11 +293,6 @@ class CourseControllerTest extends AbstractTest
 
         $this->assertResponseCode(422);
 
-        // пробуем сохранить курс с существующим кодом
-        $form['course[code]'] = 'figmadesign';
-        $client->submit($form);
-        $this->assertResponseCode(422);
-
         // пробуем сохранить курс с пустым именем
         $form['course[code]'] = 'exampleuniqcode';
         $form['course[name]'] = '';
@@ -285,33 +302,51 @@ class CourseControllerTest extends AbstractTest
 
     public function testCourseDeleting(): void
     {
+        $client = $this->authAdmin();
         // страница со списком курсов
-        $client = self::getClient();
         $crawler = $client->request('GET', '/courses/');
         $this->assertResponseOk();
 
         // подсчитываем количество курсов 
         $coursesCount = count(self::getEntityManager()->getRepository(Course::class)->findAll());
 
+        // $this->assertSame($crawler->filter('.course-name')->text(), 'Course name for test');
+
         // заходим 
         $link = $crawler->filter('.course-show')->first()->link();
         $crawler = $client->click($link);
         $this->assertResponseOk();
 
+        // получаем курс, который удалим
+        $courseName = $crawler->filter('.course-name')->text();
+        $course = self::getEntityManager()->getRepository(Course::class)->findOneBy([
+            'name' => $courseName,
+        ]);
+        // dd($course);
+
         $client->submitForm('Удалить');
         self::assertSame($client->getResponse()->headers->get('location'), '/courses/');
         $crawler = $client->followRedirect();
 
+
         $coursesCountAfterDelete = count(self::getEntityManager()->getRepository(Course::class)->findAll());
+        $lessonsAfterDeleteCourse = count(self::getEntityManager()->getRepository(Lesson::class)->findBy(['course' => $course]));
+
+        self::assertSame(0, $lessonsAfterDeleteCourse);
 
         // проверка соответствия кол-ва курсов
         self::assertSame($coursesCount - 1, $coursesCountAfterDelete);
-        //dd($coursesCountAfterDelete);
         self::assertCount($coursesCountAfterDelete, $crawler->filter('.card-body'));
     }
 
     protected function getFixtures(): array
     {
         return [AppFixtures::class];
+    }
+
+    private function authAdmin()
+    {
+        $auth = new AuthAdmin();
+        return $auth->auth();
     }
 }

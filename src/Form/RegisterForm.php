@@ -18,29 +18,29 @@ class RegisterForm extends AbstractType
     public function buildForm(FormBuilderInterface $builder, array $options): void
     {
         $builder
-        ->add('email', EmailType::class, [
-            'label' => 'Email',
-            'constraints' => [
-                new NotBlank(message: 'Укажите email'),
-                new Email(message: 'Укажите email в правильном формате'),
-            ],
-        ])
-        ->add('password', RepeatedType::class, [
-            'type' => PasswordType::class,
-            'mapped' => false,
-            'invalid_message' => 'Пароли должны совпадать',
-            'required' => false,
-            'constraints' => [
-                new NotBlank(message: 'Введите пароль'),
-                new Length(min: 6, minMessage: 'Ваш пароль должен быть не менее {{ limit }} символов'),
-            ],
-            'first_options' => [
-                'label' => 'Пароль',
-            ],
-            'second_options' => [
-                'label' => 'Повторите пароль',
-            ],
-        ]);
+            ->add('email', EmailType::class, [
+                'label' => 'Email',
+                'constraints' => [
+                    new NotBlank(message: 'Укажите email'),
+                    new Email(message: 'Укажите email в правильном формате'),
+                ],
+            ])
+            ->add('password', RepeatedType::class, [
+                'type' => PasswordType::class,
+                'mapped' => false,
+                'invalid_message' => 'Пароли должны совпадать',
+                'required' => false,
+                'constraints' => [
+                    new NotBlank(message: 'Введите пароль'),
+                    new Length(min: 6, minMessage: 'Ваш пароль должен быть не менее {{ limit }} символов'),
+                ],
+                'first_options' => [
+                    'label' => 'Пароль',
+                ],
+                'second_options' => [
+                    'label' => 'Повторите пароль',
+                ],
+            ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void

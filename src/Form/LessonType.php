@@ -13,6 +13,8 @@ use Symfony\Component\Form\Extension\Core\Type\TextareaType;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
 use Symfony\Component\Form\FormBuilderInterface;
 use Symfony\Component\OptionsResolver\OptionsResolver;
+use Symfony\Component\Validator\Constraints\LessThan;
+use Symfony\Component\Validator\Constraints\NotBlank;
 
 class LessonType extends AbstractType
 {
@@ -41,13 +43,16 @@ class LessonType extends AbstractType
             ])
             ->add('serial', NumberType::class, [
                 'label' => 'Порядковый номер',
+                'constraints' => [
+                    new LessThan(value: 10000, message: "Порядковый номер должен быть меньше, чем {{ compared_value }} "),
+                    new NotBlank(message: 'Порядковый номер не может быть пустым')
+                ],
                 'attr' => [
                     'max' => 10000,
                     'min' => 1,
                 ]
             ])
-            ->add('course', HiddenType::class)
-        ;
+            ->add('course', HiddenType::class);
         $builder->get('course')
             ->addModelTransformer(
                 new CallbackTransformer(
@@ -60,8 +65,7 @@ class LessonType extends AbstractType
                             ->find($courseId);
                     }
                 )
-            )
-        ;
+            );
     }
 
     public function configureOptions(OptionsResolver $resolver): void

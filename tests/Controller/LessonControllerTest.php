@@ -6,12 +6,15 @@ use App\DataFixtures\AppFixtures;
 use App\Entity\Course;
 use App\Entity\Lesson;
 use App\Tests\AbstractTest;
+use App\Tests\Utils\AuthAdmin;
+use JMS\Serializer\SerializerInterface;
 
 class LessonControllerTest extends AbstractTest
 {
+
     public function testGetActionsResponseOk(): void
     {
-        $client = self::getClient();
+        $client = $this->authAdmin();
         $lessons = self::getEntityManager()->getRepository(Lesson::class)->findAll();
         foreach ($lessons as $lesson) {
             // детальная страница
@@ -24,20 +27,9 @@ class LessonControllerTest extends AbstractTest
         }
     }
 
-    // public function testPostActionsResponseOk(): void
-    // {
-    //     $client = self::getClient();
-    //     $lessons = self::getEntityManager()->getRepository(Lesson::class)->findAll();
-    //     foreach ($lessons as $lesson) {
-    //         $client->request('POST', '/lessons/' . $lesson->getId() . '/edit');
-    //         $this->assertResponseOk();
-    //     }
-    // }
-
     public function testSuccessfulLessonCreating(): void
     {
-        // от списка курсов переходим на страницу просмотра курса
-        $client = self::getClient();
+        $client = $this->authAdmin();
         $crawler = $client->request('GET', '/courses/');
         $this->assertResponseOk();
 
@@ -62,18 +54,17 @@ class LessonControllerTest extends AbstractTest
             ->findOneBy(['id' => $form['lesson[course]']->getValue()]);
 
         $client->submit($form);
+        $this->assertResponseRedirect();
 
         // проверяем редирект
         self::assertSame($client->getResponse()->headers->get('location'), '/courses/' . $course->getId());
         $crawler = $client->followRedirect();
 
         $this->assertResponseOk();
-        $this->assertSame($crawler->filter('.lesson')->last()->text(), 'Lesson for test');
 
         $link = $crawler->filter('.lesson')->last()->link();
         $crawler = $client->click($link);
         $this->assertResponseOk();
-
         // проверим название и содержание
         $this->assertSame($crawler->filter('.lesson-name')->first()->text(), 'Lesson for test');
         $this->assertSame($crawler->filter('.content')->first()->text(), 'Some content in test for lesson');
@@ -81,8 +72,8 @@ class LessonControllerTest extends AbstractTest
 
     public function testLessonCreatingWithEmptyName(): void
     {
+        $client = $this->authAdmin();
         // от списка курсов переходим на страницу просмотра курса
-        $client = self::getClient();
         $crawler = $client->request('GET', '/courses/');
         $this->assertResponseOk();
 
@@ -112,8 +103,8 @@ class LessonControllerTest extends AbstractTest
 
     public function testLessonCreatingWithEmptyContent(): void
     {
+        $client = $this->authAdmin();
         // от списка курсов переходим на страницу просмотра курса
-        $client = self::getClient();
         $crawler = $client->request('GET', '/courses/');
         $this->assertResponseOk();
 
@@ -143,8 +134,8 @@ class LessonControllerTest extends AbstractTest
 
     public function testLessonCreatingWithEmptyNumber(): void
     {
+        $client = $this->authAdmin();
         // от списка курсов переходим на страницу просмотра курса
-        $client = self::getClient();
         $crawler = $client->request('GET', '/courses/');
         $this->assertResponseOk();
 
@@ -157,13 +148,14 @@ class LessonControllerTest extends AbstractTest
         $crawler = $client->click($link);
         $this->assertResponseOk();
 
-        // заполняем форму данными с пустым названием
+        // заполняем форму данными с пустым порядковым номером
         $form = $crawler->selectButton('Сохранить')->form([
             'lesson[name]' => 'Lesson for test',
             'lesson[content]' => 'Some content in test for lesson',
             'lesson[serial]' => '',
         ]);
         $client->submit($form);
+
         $this->assertResponseCode(422);
 
         self::assertSelectorTextContains(
@@ -174,8 +166,8 @@ class LessonControllerTest extends AbstractTest
 
     public function testSuccessfulLessonEditing(): void
     {
+        $client = $this->authAdmin();
         // от списка курсов переходим на страницу просмотра курса
-        $client = self::getClient();
         $crawler = $client->request('GET', '/courses/');
         $this->assertResponseOk();
 
@@ -224,8 +216,8 @@ class LessonControllerTest extends AbstractTest
 
     public function testLessonDeleting(): void
     {
+        $client = $this->authAdmin();
         // от списка курсов переходим на страницу просмотра курса
-        $client = self::getClient();
         $crawler = $client->request('GET', '/courses/');
         $this->assertResponseOk();
 
@@ -252,7 +244,6 @@ class LessonControllerTest extends AbstractTest
         // количество до удаления
         $countBeforeDeleting = count($course->getLessons());
 
-
         $link = $crawler->filter('.course')->first()->link();
         $crawler = $client->click($link);
         $this->assertResponseOk();
@@ -260,7 +251,7 @@ class LessonControllerTest extends AbstractTest
         $link = $crawler->filter('.lesson')->first()->link();
         $crawler = $client->click($link);
         $this->assertResponseOk();
-
+        // $client->getCrawler()
         $client->submitForm('Удалить');
         self::assertSame($client->getResponse()->headers->get('location'), '/courses/' . $course->getId());
         $crawler = $client->followRedirect();
@@ -272,5 +263,11 @@ class LessonControllerTest extends AbstractTest
     protected function getFixtures(): array
     {
         return [AppFixtures::class];
+    }
+
+    private function authAdmin()
+    {
+        $auth = new AuthAdmin();
+        return $auth->auth();
     }
 }

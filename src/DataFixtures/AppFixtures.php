@@ -9,25 +9,6 @@ use Doctrine\Persistence\ObjectManager;
 
 class AppFixtures extends Fixture
 {
-    public function load(ObjectManager $manager): void
-    {
-        foreach (self::COURCES as $i => $value) {
-            $course = (new Course())
-                ->setCode($value['code'])
-                ->setName($value['name'])
-                ->setDescription($value['description']);
-            $manager->persist($course);
-
-            foreach (self::LESSONS[$i] as $k => $lessonData) {
-                $lesson = (new Lesson())
-                    ->setCourse($course)
-                    ->setName($lessonData['name'])->setContent($lessonData['content'])
-                    ->setSerial($k);
-                $manager->persist($lesson);
-            }
-        }
-        $manager->flush();
-    }
     const COURCES = [
         [
             'code' => 'nympydata',
@@ -169,4 +150,24 @@ class AppFixtures extends Fixture
             ]
         ]
     ];
+
+    public function load(ObjectManager $manager): void
+    {
+        foreach (self::COURCES as $i => $value) {
+            $course = (new Course())
+                ->setCode($value['code'])
+                ->setName($value['name'])
+                ->setDescription($value['description']);
+            $manager->persist($course);
+
+            foreach (self::LESSONS[$i] as $k => $lessonData) {
+                $lesson = (new Lesson())
+                    ->setCourse($course)
+                    ->setName($lessonData['name'])->setContent($lessonData['content'])
+                    ->setSerial($k);
+                $manager->persist($lesson);
+            }
+        }
+        $manager->flush();
+    }
 }

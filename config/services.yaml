@@ -19,9 +19,18 @@ services:
             - '../src/DependencyInjection/'
             - '../src/Entity/'
             - '../src/Kernel.php'
-
+    App\Service\BillingClient:
+        public: true
+        # alias:  App\Tests\Mock\BillingClientMock
     # add more service definitions when explicit configuration is needed
     # please note that last definitions always *replace* previous ones
-    App\Service\BillingClient: 
-        arguments:
-            $host: '%env(string:BILLING_HOST)%'
+    # App\Service\BillingClient: 
+    #     arguments:
+    #         $host: '%env(string:BILLING_HOST)%'
+
+when@test:
+    services:
+        App\Service\BillingClient:
+            # alias: App\Tests\Mock\BillingClientMock
+            public: true
+            autowire: true

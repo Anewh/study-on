@@ -14,20 +14,20 @@ use Symfony\Component\HttpFoundation\Response;
 
 abstract class AbstractTest extends WebTestCase
 {
-    /** @var Client */
+    // /** @var Client */
     protected static $client;
 
-    protected function setUp(): void
-    {
-        static::getClient();
-        $this->loadFixtures($this->getFixtures());
-    }
+    // protected function setUp(): void
+    // {
+    //     // static::getClient();
+    //     $this->loadFixtures($this->getFixtures());
+    // }
 
-    final protected function tearDown(): void
-    {
-        parent::tearDown();
-        static::$client = null;
-    }
+    // final protected function tearDown(): void
+    // {
+    //     parent::tearDown();
+    // //     // static::$client = null;
+    // }
 
     /**
      * Shortcut.
@@ -95,39 +95,41 @@ abstract class AbstractTest extends WebTestCase
 
     protected static function getClient($reinitialize = false, array $options = [], array $server = [])
     {
-        if (!static::$client || $reinitialize) {
-            static::$client = static::createClient($options, $server);
-        }
+        // if (!static::$client || $reinitialize) {
+        //     static::$client = static::createClient($options, $server);
+        // }
 
-        static::$client->getKernel()->boot();
+        // static::$client->getKernel()->boot();
 
-        return static::$client;
+        $client = static::createClient();
+        self::$client = $client;
+        return self::$client;
     }
 
     /**
      * Load fixtures before test.
      */
-    protected function loadFixtures(array $fixtures = [])
-    {
-        $loader = new Loader();
+    // protected function loadFixtures(array $fixtures = [])
+    // {
+    //     $loader = new Loader();
 
-        foreach ($fixtures as $fixture) {
-            if (!\is_object($fixture)) {
-                $fixture = new $fixture();
-            }
+    //     foreach ($fixtures as $fixture) {
+    //         // if (!\is_object($fixture)) {
+    //         //     $fixture = new $fixture();
+    //         // }
 
-            if ($fixture instanceof ContainerAwareInterface) {
-                $fixture->setContainer(static::getContainer());
-            }
+    //         // if ($fixture instanceof ContainerAwareInterface) {
+    //         //     $fixture->setContainer(static::getContainer());
+    //         // }
+    //         $fixture = new $fixture();
+    //         $loader->addFixture($fixture);
+    //     }
 
-            $loader->addFixture($fixture);
-        }
-
-        $em = static::getEntityManager();
-        $purger = new ORMPurger($em);
-        $executor = new ORMExecutor($em, $purger);
-        $executor->execute($loader->getFixtures());
-    }
+    //     $em = static::getEntityManager();
+    //     $purger = new ORMPurger($em);
+    //     $executor = new ORMExecutor($em, $purger);
+    //     $executor->execute($loader->getFixtures());
+    // }
     
     protected function getFixtures(): array
     {

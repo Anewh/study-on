@@ -10,7 +10,6 @@ use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
-use Symfony\Component\Security\Core\Exception\AccessDeniedException;
 use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 #[Route('/lessons')]
@@ -89,7 +88,7 @@ class LessonController extends AbstractController
     #[IsGranted('ROLE_SUPER_ADMIN')]
     public function delete(Request $request, Lesson $lesson, LessonRepository $lessonRepository): Response
     {
-        if ($this->isCsrfTokenValid('delete'.$lesson->getId(), $request->request->get('_token'))) {
+        if ($this->isCsrfTokenValid('delete' . $lesson->getId(), $request->request->get('_token'))) {
             $lessonRepository->remove($lesson, true);
         }
 

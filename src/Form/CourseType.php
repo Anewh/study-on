@@ -25,8 +25,7 @@ class CourseType extends AbstractType
             ->add('description', TextareaType::class, [
                 'required' => false,
                 'label' => 'Описание'
-            ])
-        ;
+            ]);
     }
 
     public function configureOptions(OptionsResolver $resolver): void
