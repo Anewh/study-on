@@ -6,8 +6,11 @@ use App\Exception\BillingUnavailableException;
 use Exception;
 use App\Security\User;
 use App\Form\RegisterForm;
+use App\Repository\CourseRepository;
 use App\Service\BillingClient;
 use App\Security\BillingAuthenticator;
+use DateTime;
+use DateTimeInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
@@ -19,6 +22,10 @@ use Symfony\Component\Security\Http\Attribute\IsGranted;
 
 class SecurityController extends AbstractController
 {
+    private const TRANSLATE_TYPE = [
+        'payment' => 'Оплата',
+        'deposit' => 'Зачисление',
+    ];
     private BillingClient $billingClient;
     public function __construct(BillingClient $billingClient)
     {
@@ -99,6 +106,43 @@ class SecurityController extends AbstractController
         return $this->render('security/register.html.twig', [
             'registerForm' => $form->createView(),
             'error' => $authenticationUtils->getLastAuthenticationError()
+        ]);
+    }
+
+     #[Route('/transactions', name: 'app_transactions_index')]
+     public function getTransactions(CourseRepository $courseRepository): Response
+    {
+        /** @var User $user */
+        $user = $this->getUser();
+
+        $transactions = $this->billingClient->getTransactions($user->getApiToken());
+
+        foreach ($transactions as &$transaction) {
+            $transaction['created_at'] = DateTime::createFromFormat(
+                DateTimeInterface::ATOM,
+                $transaction['created_at']
+            );
+
+            if ($transaction['type'] === 'payment') {
+                // if (isset($transaction['expires_at'])) {
+                //     $transaction['expires_at'] = ConverterService::reformatDateTime($transaction['expires_at']);
+                // }
+
+                $transaction['course'] = $courseRepository->findOneBy([
+                    'code' => $transaction['course_code']
+                ]);
+            }
+
+            $transaction['type'] = self::TRANSLATE_TYPE[$transaction['type']];
+        }
+
+        usort($transactions, static function ($a, $b) {
+            return $a['created_at'] <=> $b['created_at'];
+        });
+
+        return $this->render('profile/transactions_index.html.twig', [
+            'transactions' => $transactions,
+            //'datetimeFormat' => ConverterService::SIMPLE_DATETIME_FORMAT,
         ]);
     }
 }

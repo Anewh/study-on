@@ -2,10 +2,16 @@
 
 namespace App\Service;
 
+use App\Dto\CourseDto;
 use App\Dto\UserDto;
 use App\Exception\BillingUnavailableException;
+use App\Exception\CourseAlreadyPaidException;
+use App\Exception\InsufficientFundsException;
+use App\Exception\ResourceAlreadyExistsException;
+use App\Exception\ResourceNotFoundException;
 use JMS\Serializer\Serializer;
 use JMS\Serializer\SerializerInterface;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
 use Symfony\Component\Security\Core\Exception\CustomUserMessageAuthenticationException;
 
@@ -13,6 +19,7 @@ class BillingClient
 {
     protected const GET = 'GET';
     protected const POST = 'POST';
+    protected const BAD_TOKEN = 'Need to auth again';
     private string $host;
     private Serializer $serializer;
 
@@ -32,6 +39,7 @@ class BillingClient
             [],
             $credentials
         );
+        //dd($response);
         if ($response['code'] === 401) {
             throw new BillingUnavailableException('Неправильные логин или пароль');
         }
@@ -80,6 +88,173 @@ class BillingClient
         $userDto = $this->parseJsonResponse($response, UserDto::class);
         return $userDto;
     }
+
+    public function refreshToken(string $refreshToken): array
+    {
+        $response = $this->jsonRequest(
+            self::POST,
+            '/token/refresh',
+            [],
+            ['refresh_token' => $refreshToken],
+        );
+        if ($response['code'] >= 400) {
+            throw new BillingUnavailableException();
+        }
+
+        return json_decode($response['body'], true, 512, JSON_THROW_ON_ERROR);
+    }
+
+    public function getCourses(): array
+    {
+        $response = $this->jsonRequest(
+            self::GET,
+            '/courses'
+        );
+
+        //dd($response);
+
+        if ($response['code'] >= 400) {
+            throw new BillingUnavailableException();
+        }
+
+        return $this->parseJsonResponse($response);
+    }
+
+    public function getCourse(string $code): array
+    {
+        $response = $this->jsonRequest(
+            self::GET,
+            '/courses/' . $code
+        );
+
+        //dd($response);
+
+        if ($response['code'] === 404) {
+            throw new ResourceNotFoundException('Курс не найден');
+        }
+        if ($response['code'] >= 400) {
+            throw new BillingUnavailableException();
+        }
+
+        return $this->parseJsonResponse($response);
+    }
+
+    public function payCourse(string $token, string $code): array
+    {
+        $response = $this->jsonRequest(
+            self::POST,
+            '/courses/' . $code . '/pay',
+            [],
+            [],
+            ['Authorization' => 'Bearer ' . $token]
+        );
+
+        switch ($response['code']) {
+            case 401:
+                throw new UnauthorizedHttpException(self::BAD_TOKEN);
+            case 404:
+                throw new ResourceNotFoundException();
+            case 406:
+                throw new InsufficientFundsException();
+            case 409:
+                throw new CourseAlreadyPaidException();
+            default:
+                break;
+        }
+        if ($response['code'] >= 400) {
+            throw new BillingUnavailableException();
+        }
+
+        return $this->parseJsonResponse($response);
+    }
+
+    public function getTransactions(
+        string  $token,
+        ?string $transactionType = null,
+        ?string $courseCode = null,
+        bool    $skipExpired = false
+    ): array {
+        $parameters = [];
+
+        if (null !== $transactionType) {
+            $parameters['filter[type]'] = $transactionType;
+        }
+        if (null !== $courseCode) {
+            $parameters['filter[course_code]'] = $courseCode;
+        }
+        if ($skipExpired) {
+            $parameters['filter[skip_expired]'] = $skipExpired;
+        }
+
+        $response = $this->jsonRequest(
+            self::GET,
+            '/transactions',
+            $parameters,
+            [],
+            ['Authorization' => 'Bearer ' . $token]
+        );
+
+        //dd($response);
+
+        if ($response['code'] === 401) {
+            throw new UnauthorizedHttpException(self::BAD_TOKEN);
+        }
+        if ($response['code'] >= 400) {
+            throw new BillingUnavailableException();
+        }
+
+        return $this->parseJsonResponse($response);
+    }
+
+    public function isCoursePaid(string $apiToken, array $billingCourse): bool
+    {
+        if ($billingCourse['type'] === 'free') {
+            return true;
+        }
+        $transaction = $this->getTransactions(
+            $apiToken,
+            'payment',
+            $billingCourse['code'],
+            true
+        );
+        return count($transaction) > 0;
+    }
+
+    public function saveCourse(string $token, CourseDto $course, string $code = null): bool
+    {
+        $path = '/courses';
+        if (null !== $code) {
+            $path .= "/$code";
+        }
+
+        $response = $this->jsonRequest(
+            self::POST,
+            $path,
+            [],
+            $course,
+            ['Authorization' => 'Bearer ' . $token]
+        );
+        switch ($response['code']) {
+            case 401:
+                throw new UnauthorizedHttpException(self::BAD_TOKEN);
+            case 403:
+                throw new AccessDeniedHttpException();
+            case 404:
+                throw new ResourceNotFoundException('Курс не найден');
+            case 409:
+                throw new ResourceAlreadyExistsException('Курс с данным кодом уже существует');
+            default:
+                break;
+        }
+
+        $body = $this->parseJsonResponse($response);
+        //dd($response);
+        if ($response['code'] >= 400) {
+            throw new BillingUnavailableException($body['error']);
+        }
+        return $body['success'];
+    }
+
 
     private function parseJsonResponse(array $response, ?string $type = null)
     {
