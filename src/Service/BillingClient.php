@@ -194,7 +194,7 @@ class BillingClient
             ['Authorization' => 'Bearer ' . $token]
         );
 
-        //dd($response);
+        //var_export($response);
 
         if ($response['code'] === 401) {
             throw new UnauthorizedHttpException(self::BAD_TOKEN);
@@ -203,6 +203,7 @@ class BillingClient
             throw new BillingUnavailableException();
         }
 
+        //var_export($this->parseJsonResponse($response));
         return $this->parseJsonResponse($response);
     }
 

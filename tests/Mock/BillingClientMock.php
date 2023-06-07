@@ -15,6 +15,8 @@ use Symfony\Component\Validator\Validator\ValidatorInterface;
 
 class BillingClientMock extends BillingClient
 {
+
+
     const USER = [
         'username' => 'user@example.com',
         'password' => 'password',
@@ -46,7 +48,7 @@ class BillingClientMock extends BillingClient
         } else {
             throw new AuthenticationException('Неправильные логин или пароль');
         }
-        
+
         return [
             'code' => 200,
             'token' => $token
@@ -86,10 +88,21 @@ class BillingClientMock extends BillingClient
         } else {
             throw new BillingUnavailableException('Ошибка авторизации');
         }
+        //dd($userDto);
         return $userDto;
     }
 
-    private function generateToken(array $roles, string $username): string
+    public function getTransactions(
+        string $token,
+        ?string $transactionType = null,
+        ?string $courseCode = null,
+        bool $skipExpired = false
+    ): array {
+
+        return [0 => ['id' => 112, 'created_at' => '2023-06-07T22:40:36+00:00', 'type' => 'payment', 'course_code' => 'molecularphysics', 'amount' => 20,], 1 => ['id' => 113, 'created_at' => '2023-06-07T22:40:36+00:00', 'expires_at' => '2023-06-14T22:40:36+00:00', 'type' => 'payment', 'course_code' => 'figmadesign', 'amount' => 10,]];
+    }
+
+    public function generateToken(array $roles = null, string $username): string
     {
         return 'header.' . base64_encode(json_encode([
             'exp' => (new \DateTime('+ 1 hour'))->getTimestamp(),
@@ -97,5 +110,4 @@ class BillingClientMock extends BillingClient
             'roles' => $roles,
         ], JSON_THROW_ON_ERROR)) . '.trailer';
     }
-
 }

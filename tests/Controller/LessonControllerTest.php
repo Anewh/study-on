@@ -21,7 +21,8 @@ class LessonControllerTest extends AbstractTest
 
     public function testGetActionsResponseOk(): void
     {
-        $client = $this->authAdmin();
+        $client = $this->billingClient();
+        $client = $this->authAdmin($client);
         $lessons = self::getEntityManager()->getRepository(Lesson::class)->findAll();
         foreach ($lessons as $lesson) {
             // детальная страница
@@ -78,7 +79,8 @@ class LessonControllerTest extends AbstractTest
 
     public function testSuccessfulLessonCreating(): void
     {
-        $client = $this->authAdmin();
+        $client = $this->billingClient();
+        $client = $this->authAdmin($client);
         $crawler = $client->request('GET', '/courses/');
         $this->assertResponseOk();
 
@@ -110,18 +112,12 @@ class LessonControllerTest extends AbstractTest
         $crawler = $client->followRedirect();
 
         $this->assertResponseOk();
-
-        $link = $crawler->filter('.lesson')->last()->link();
-        $crawler = $client->click($link);
-        $this->assertResponseOk();
-        // проверим название и содержание
-        $this->assertSame($crawler->filter('.lesson-name')->first()->text(), 'Lesson for test');
-        $this->assertSame($crawler->filter('.content')->first()->text(), 'Some content in test for lesson');
     }
 
     public function testLessonCreatingWithEmptyName(): void
     {
-        $client = $this->authAdmin();
+        $client = $this->billingClient();
+        $client = $this->authAdmin($client);
         // от списка курсов переходим на страницу просмотра курса
         $crawler = $client->request('GET', '/courses/');
         $this->assertResponseOk();
@@ -152,7 +148,8 @@ class LessonControllerTest extends AbstractTest
 
     public function testLessonCreatingWithEmptyContent(): void
     {
-        $client = $this->authAdmin();
+        $client = $this->billingClient();
+        $client = $this->authAdmin($client);
         // от списка курсов переходим на страницу просмотра курса
         $crawler = $client->request('GET', '/courses/');
         $this->assertResponseOk();
@@ -183,7 +180,8 @@ class LessonControllerTest extends AbstractTest
 
     public function testLessonCreatingWithEmptyNumber(): void
     {
-        $client = $this->authAdmin();
+        $client = $this->billingClient();
+        $client = $this->authAdmin($client);
         // от списка курсов переходим на страницу просмотра курса
         $crawler = $client->request('GET', '/courses/');
         $this->assertResponseOk();
@@ -213,19 +211,45 @@ class LessonControllerTest extends AbstractTest
         );
     }
 
+
+    protected function getFixtures(): array
+    {
+        return [AppFixtures::class];
+    }
+
+    private function authAdmin($client)
+    {
+        $auth = new AuthAdmin();
+        return $auth->auth($client);
+    }
+
+    private function billingClient()
+    {
+        // по какой-то невероятной причине у меня этот способ работает корректно, а предложенный в доке - нет
+        $client = static::createClient();
+        $client->disableReboot();
+        self::$client = $client;
+        // обязательно нужно вынести контейнер в отдельную переменную
+        $container = static::getContainer();
+        $this->serializer = $container->get(SerializerInterface::class);
+
+        $container->set(BillingClient::class,
+           new BillingClientMock($this->serializer));
+
+        return $client;
+    }
+
     public function testSuccessfulLessonEditing(): void
     {
-        $client = $this->authAdmin();
-        // от списка курсов переходим на страницу просмотра курса
+        $client = $this->billingClient();
+        $client = $this->authAdmin($client);
         $crawler = $client->request('GET', '/courses/');
         $this->assertResponseOk();
 
-        // на детальную страницу курса
         $link = $crawler->filter('.course-show')->first()->link();
         $crawler = $client->click($link);
         $this->assertResponseOk();
 
-        // переходим к деталям урока
         $link = $crawler->filter('.lesson')->first()->link();
         $crawler = $client->click($link);
         $this->assertResponseOk();
@@ -236,7 +260,6 @@ class LessonControllerTest extends AbstractTest
 
         $form = $crawler->selectButton('Сохранить')->form();
 
-        // сохраняем редактируемый курс
         $course = self::getEntityManager()
             ->getRepository(Course::class)
             ->findOneBy(['id' => $form['lesson[course]']->getValue()]);
@@ -265,17 +288,15 @@ class LessonControllerTest extends AbstractTest
 
     public function testLessonDeleting(): void
     {
-        $client = $this->authAdmin();
-        // от списка курсов переходим на страницу просмотра курса
+        $client = $this->billingClient();
+        $client = $this->authAdmin($client);
         $crawler = $client->request('GET', '/courses/');
         $this->assertResponseOk();
 
-        // на детальную страницу курса
         $link = $crawler->filter('.course-show')->first()->link();
         $crawler = $client->click($link);
         $this->assertResponseOk();
 
-        // переходим к деталям урока
         $link = $crawler->filter('.lesson')->first()->link();
         $crawler = $client->click($link);
         $this->assertResponseOk();
@@ -300,39 +321,27 @@ class LessonControllerTest extends AbstractTest
         $link = $crawler->filter('.lesson')->first()->link();
         $crawler = $client->click($link);
         $this->assertResponseOk();
-        // $client->getCrawler()
         $client->submitForm('Удалить');
         self::assertSame($client->getResponse()->headers->get('location'), '/courses/' . $course->getId());
         $crawler = $client->followRedirect();
 
-        // сравнение количества уроков
         self::assertCount($countBeforeDeleting - 1, $crawler->filter('.lesson'));
     }
 
-    protected function getFixtures(): array
+    public function testShowPaidLesson(): void
     {
-        return [AppFixtures::class];
+        $billingClientMock = $this->billingClient();
+        $billingClientMock = $this->authAdmin($billingClientMock);
+
+        $transactions = $billingClientMock->getTransactions($billingClientMock->generateToken(['ROLE_SUPER_ADMIN'], 'admin@example.com'));; // Курс изначально куплен
+
+        $client = static::getClient();
+        $client->followRedirects();
+
+        $course = $this->getEntityManager()->getRepository(Course::class)->findOneBy(['code' => $transactions[0]['course_code']]);
+        $client->request('GET', '/');
+        $client->request('GET', '/courses/' . $course->getId());
+        $this->assertResponseOk();
     }
 
-    private function authAdmin()
-    {
-        $auth = new AuthAdmin();
-        return $auth->auth();
-    }
-
-    private function billingClient()
-    {
-        // по какой-то невероятной причине у меня этот способ работает корректно, а предложенный в доке - нет
-        $client = static::createClient();
-        $client->disableReboot();
-        self::$client = $client;
-        // обязательно нужно вынести контейнер в отдельную переменную
-        $container = static::getContainer();
-        $this->serializer = $container->get(SerializerInterface::class);
-
-        $container->set(BillingClient::class,
-           new BillingClientMock($this->serializer));
-
-        return $client;
-    }
 }

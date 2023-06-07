@@ -47,12 +47,15 @@ class BillingAuthenticator extends AbstractLoginFormAuthenticator
 
         $userLoader = function ($token): UserInterface {
             try {
+                
                 $userDto = $this->billingClient->getCurrentUser($token);
             } catch (BillingUnavailableException $e) {
                 throw new AuthenticationException(self::SERVICE_TEMPORARILY_UNAVAILABLE);
             }
             return User::fromDto($userDto)->setApiToken($token);
         };
+
+        
 
         return new SelfValidatingPassport(
             new UserBadge($token, $userLoader),

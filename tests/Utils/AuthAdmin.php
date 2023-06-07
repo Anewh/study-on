@@ -20,9 +20,9 @@ class AuthAdmin extends AbstractTest
         $this->serializer = $serializer;
     }
 
-    public function auth()
+    public function auth($client)
     {
-        $client = $this->billingClient();
+        //$client = $this->billingClient();
         $crawler = $client->request('GET', '/');
         $crawler = $client->followRedirect();
         $link = $crawler->selectLink('Вход')->link();
@@ -42,20 +42,20 @@ class AuthAdmin extends AbstractTest
         return $client;
     }
 
-    private function billingClient()
-    {
-        // по какой-то невероятной причине у меня этот способ работает корректно, а предложенный в доке - нет
-        $client = static::createClient();
-        $client->disableReboot();
-        self::$client = $client;
-        // обязательно нужно вынести контейнер в отдельную переменную
-        $container = static::getContainer();
-        $this->serializer = $container->get(SerializerInterface::class);
+    // private function billingClient()
+    // {
+    //     // по какой-то невероятной причине у меня этот способ работает корректно, а предложенный в доке - нет
+    //     $client = static::createClient();
+    //     $client->disableReboot();
+    //     self::$client = $client;
+    //     // обязательно нужно вынести контейнер в отдельную переменную
+    //     $container = static::getContainer();
+    //     $this->serializer = $container->get(SerializerInterface::class);
 
-        $container->set(BillingClient::class,
-           new BillingClientMock($this->serializer));
+    //     $container->set(BillingClient::class,
+    //        new BillingClientMock($this->serializer));
 
-        return $client;
-    }
+    //     return $client;
+    // }
 
 }
