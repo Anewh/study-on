@@ -7,7 +7,18 @@
 {% block body %}
 	<h1>Курсы</h1>
 	<div class="row  row-cols-1 row-cols-md-2 g-4">
+
 		{% for course in courses %}
+			{% set transaction = transactions[course['code']] ?? null %}
+			{% set isPaid = transaction is not null %}
+			
+			{% if course.type is same as('buy') %}
+				{% set paidHelp = isPaid ? 'Куплено' : course.price ~ '₽' %}
+			{% elseif course.type is same as('rent') %}
+				{% set paidHelp = isPaid ? 'Арендовано до ' ~ transaction.expires_at : course.price ~ '₽ в неделю'  %}
+			{% else %}
+				{% set paidHelp = 'Бесплатный' %}
+			{% endif %}
 			<div class="col">
 				<div class="card">
 					<div class="card-body">
@@ -15,13 +26,7 @@
 							<a class="course-show" href="{{ path('app_course_show', {'id': course.id}) }}">{{ course.name }}</a>
 						</h5>
 						<p class="card-text">{{ course.description }}</p>
-						{% if coursesMessage[course.code] is defined %}
-							<h6 class="card-subtitle mb-2 text-muted">{{ coursesMessage[course.code] }}</h6>
-						{% else %}
-							<h6 class="card-subtitle mb-2 text-muted">
-								Бесплатный
-							</h6>
-						{% endif %}
+						<h6 class="card-subtitle mb-2 text-muted">{{ paidHelp }}</h6>
 						<a href="{{ path('app_course_show', {'id': course.id}) }}" class="btn btn-primary">
 							Подробнее
 						</a>

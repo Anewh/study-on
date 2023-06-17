@@ -8,6 +8,7 @@ use App\Repository\CourseRepository;
 use App\Repository\LessonRepository;
 use App\Security\User;
 use App\Service\BillingClient;
+use App\Service\CourseService;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Bundle\SecurityBundle\Security;
 use Symfony\Component\HttpFoundation\Request;
@@ -68,13 +69,14 @@ class LessonController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_lesson_show', methods: ['GET'])]
-    public function show(Lesson $lesson): Response
+    public function show(Lesson $lesson, CourseService $courseService): Response
     {
+        /** @var User $user */
         $user = $this->security->getUser();
 
         $billingCourse = $this->billingClient->getCourse($lesson->getCourse()->getCode());
         if (!$this->isGranted('ROLE_SUPER_ADMIN') &&
-                !$this->billingClient->isCoursePaid($user->getApiToken(), $billingCourse)) {
+                !$courseService->isCoursePaid($user->getApiToken(), $billingCourse)) {
             throw new AccessDeniedException();
         }
 

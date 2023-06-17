@@ -44,6 +44,13 @@ class CourseRepository extends ServiceEntityRepository
             $this->getEntityManager()->flush();
         }
     }
+    public function findAllToArray(): array
+    {
+        return $this
+            ->createQueryBuilder('c')
+            ->getQuery()
+            ->getArrayResult();
+    }
 
 //    /**
 //     * @return Course[] Returns an array of Course objects

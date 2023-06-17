@@ -5,6 +5,8 @@ namespace App\Security;
 use App\Exception\BillingUnavailableException;
 use App\Exception\CustomUserMessageAuthenticationException;
 use App\Service\BillingClient;
+use DateTime;
+use JsonException;
 use Symfony\Component\Security\Core\Exception\UnsupportedUserException;
 use Symfony\Component\Security\Core\Exception\UserNotFoundException;
 use Symfony\Component\Security\Core\User\PasswordAuthenticatedUserInterface;
@@ -15,6 +17,8 @@ use Symfony\Component\Security\Core\User\UserProviderInterface;
 class UserProvider implements UserProviderInterface, PasswordUpgraderInterface
 {
     private BillingClient $billingClient;
+
+    private const SERVICE_UNAVAILABLE = 'Сервис временно недоступен. Попробуйте авторизоваться позже';
 
     public function __construct(BillingClient $billingClient)
     {
@@ -34,7 +38,7 @@ class UserProvider implements UserProviderInterface, PasswordUpgraderInterface
         try {
             $userDto = $this->billingClient->getCurrentUser($identifier);
         } catch (BillingUnavailableException $e) {
-            throw new CustomUserMessageAuthenticationException('Сервис временно недоступен. Попробуйте авторизоваться позднее');
+            throw new CustomUserMessageAuthenticationException(self::SERVICE_UNAVAILABLE);
         }
         return User::fromDto($userDto)->setApiToken($identifier);
     }
@@ -47,26 +51,32 @@ class UserProvider implements UserProviderInterface, PasswordUpgraderInterface
         return $this->loadUserByIdentifier($username);
     }
 
-    /**
-     * Refreshes the user after being reloaded from the session.
-     *
-     * When a user is logged in, at the beginning of each request, the
-     * User object is loaded from the session and then this method is
-     * called. Your job is to make sure the user's data is still fresh by,
-     * for example, re-querying for fresh User data.
-     *
-     * If your firewall is "stateless: true" (for a pure API), this
-     * method is not called.
-     */
     public function refreshUser(UserInterface $user): UserInterface
     {
         if (!$user instanceof User) {
             throw new UnsupportedUserException(sprintf('Invalid user class "%s".', get_class($user)));
         }
 
-        // Return a User object after making sure its data is "fresh".
-        // Or throw a UsernameNotFoundException if the user no longer exists.
-        return $this->loadUserByIdentifier($user->getApiToken());
+        try {
+            $tokenPayload = explode(".", $user->getApiToken())[1];
+            $tokenPayload = json_decode(base64_decode($tokenPayload), true, 512, JSON_THROW_ON_ERROR);
+        } catch (JsonException $e) {
+            throw new CustomUserMessageAuthenticationException(self::SERVICE_UNAVAILABLE);
+        }
+        
+        $tokenExpiredTime = (new DateTime())->setTimestamp($tokenPayload['exp']);
+
+        if ($tokenExpiredTime <= new DateTime() && $user->getRefreshToken()!== null) {
+            try {
+                $tokens = $this->billingClient->refreshToken($user->getRefreshToken());
+            } catch (BillingUnavailableException|JsonException $e) {
+                throw new CustomUserMessageAuthenticationException(self::SERVICE_UNAVAILABLE);
+            }
+            $user->setApiToken($tokens['token'])
+                ->setRefreshToken($tokens['refresh_token']);
+        }
+
+        return $user;
     }
 
     /**

@@ -97,6 +97,7 @@ class BillingClient
             [],
             ['refresh_token' => $refreshToken],
         );
+        
         if ($response['code'] >= 400) {
             throw new BillingUnavailableException();
         }
@@ -112,7 +113,6 @@ class BillingClient
         );
 
         //dd($response);
-
         if ($response['code'] >= 400) {
             throw new BillingUnavailableException();
         }
@@ -126,9 +126,7 @@ class BillingClient
             self::GET,
             '/courses/' . $code
         );
-
         //dd($response);
-
         if ($response['code'] === 404) {
             throw new ResourceNotFoundException('Курс не найден');
         }
@@ -194,8 +192,6 @@ class BillingClient
             ['Authorization' => 'Bearer ' . $token]
         );
 
-        //var_export($response);
-
         if ($response['code'] === 401) {
             throw new UnauthorizedHttpException(self::BAD_TOKEN);
         }
@@ -203,22 +199,7 @@ class BillingClient
             throw new BillingUnavailableException();
         }
 
-        //var_export($this->parseJsonResponse($response));
         return $this->parseJsonResponse($response);
-    }
-
-    public function isCoursePaid(string $apiToken, array $billingCourse): bool
-    {
-        if ($billingCourse['type'] === 'free') {
-            return true;
-        }
-        $transaction = $this->getTransactions(
-            $apiToken,
-            'payment',
-            $billingCourse['code'],
-            true
-        );
-        return count($transaction) > 0;
     }
 
     public function saveCourse(string $token, CourseDto $course, string $code = null): bool
@@ -249,7 +230,7 @@ class BillingClient
         }
 
         $body = $this->parseJsonResponse($response);
-        //dd($response);
+        
         if ($response['code'] >= 400) {
             throw new BillingUnavailableException($body['error']);
         }

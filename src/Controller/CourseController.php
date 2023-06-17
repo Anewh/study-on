@@ -13,6 +13,8 @@ use App\Form\CourseType;
 use App\Repository\CourseRepository;
 use App\Security\User;
 use App\Service\BillingClient;
+use App\Service\CourseService;
+use App\Utils\Utils;
 use DateTime;
 use DateTimeInterface;
 use JsonException;
@@ -55,35 +57,19 @@ class CourseController extends AbstractController
                 $transactionsByCode[$transaction['course_code']] = $transaction;
             }
         }
+        
+        $billingCourses = Utils::mapToKey($this->billingClient->getCourses(), 'code');
+        $courses = Utils::mapToKey($courseRepository->findAllToArray(), 'code');
 
-        $billingCourses = $this->billingClient->getCourses();
-
-        $coursesMessage = [];
-        foreach ($billingCourses as $course) {
-            if (isset($transactionsByCode[$course['code']])) { // Если куплен или аренда не истекла
-                if ($course['type'] === 'rent') {
-                    /** @var DateTime $expiresAt */
-                    $expires = $transactionsByCode[$course['code']]['expires_at'];
-                    $expires = DateTime::createFromFormat(DateTimeInterface::ATOM, $expires);
-                    $coursesMessage[$course['code']] =
-                        'Арендовано до ' . $expires->format('H:i:s d.m.Y');
-                } elseif ($course['type'] === 'buy') {
-                    $coursesMessage[$course['code']] = 'Куплено';
-                }
-            } else {
-                if ($course['type'] === 'rent') {
-                    $coursesMessage[$course['code']] = $course['price'] . '₽ в неделю';
-                } elseif ($course['type'] === 'buy') {
-                    $coursesMessage[$course['code']] = $course['price'] . '₽';
-                } elseif ($course['type'] === 'free') {
-                    $coursesMessage[$course['code']] = 'Бесплатный';
-                }
-            }
+        foreach($courses as $key => &$course){
+            // dd($billingCourses);
+            $course['type'] = $billingCourses[$key]['type'];
+            $course['price'] = $billingCourses[$key]['price'] ?? null;
         }
 
         return $this->render('course/index.html.twig', [
-            'courses' => $courseRepository->findAll(),
-            'coursesMessage' => $coursesMessage,
+            'courses' => $courses,
+            'transactions' => $transactionsByCode
         ]);
     }
 
@@ -101,11 +87,9 @@ class CourseController extends AbstractController
         if ($courseRepository->count(['code' => $course->getCode()]) > 0) {
             $form->addError(new FormError('Курс с данным кодом уже существует'));
         }
-        //dd($course, $form);
         if ($form->isSubmitted() && $form->isValid()) {
 
             $courseRequest = CourseDto::createCourseRequest($form, $course);
-            //dd($courseRequest);
             $this->billingClient->saveCourse($user->getApiToken(), $courseRequest);
 
             $courseRepository->save($course, true);
@@ -124,7 +108,7 @@ class CourseController extends AbstractController
     }
 
     #[Route('/{id}', name: 'app_course_show', methods: ['GET'])]
-    public function show(Request $request, Course $course): Response
+    public function show(Request $request, Course $course, CourseService $courseService): Response
     {
         /** @var User $user */
         $user = $this->security->getUser();
@@ -138,7 +122,7 @@ class CourseController extends AbstractController
         $billingUser = $this->billingClient->getCurrentUser($user->getApiToken());
         $billingCourse = $this->billingClient->getCourse($course->getCode());
 
-        $billingCourse['isPaid'] = $this->billingClient->isCoursePaid($user->getApiToken(), $billingCourse);
+        $billingCourse['isPaid'] = $courseService->isCoursePaid($user->getApiToken(), $billingCourse);
 
         $paymentStatus = $request->query->get('payment_status');
         if (null !== $paymentStatus) {
@@ -155,9 +139,6 @@ class CourseController extends AbstractController
             'billingUser' => $billingUser,
             'paymentStatus' => $paymentStatus,
         ]);
-        // return $this->render('course/show.html.twig', [
-        //     'course' => $course,
-        // ]);
     }
 
     #[Route('/{id}/edit', name: 'app_course_edit', methods: ['GET', 'POST'])]

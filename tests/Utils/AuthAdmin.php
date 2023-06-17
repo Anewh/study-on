@@ -20,11 +20,12 @@ class AuthAdmin extends AbstractTest
         $this->serializer = $serializer;
     }
 
-    public function auth($client)
+    public function auth($client, $stop = false)
     {
         //$client = $this->billingClient();
         $crawler = $client->request('GET', '/');
         $crawler = $client->followRedirect();
+        
         $link = $crawler->selectLink('Вход')->link();
         $crawler = $client->click($link);
         $this->assertResponseOk();

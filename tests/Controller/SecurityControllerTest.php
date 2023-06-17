@@ -2,6 +2,7 @@
 
 namespace App\Tests\Controller;
 
+use App\Entity\Course;
 use App\Service\BillingClient;
 use App\Tests\AbstractTest;
 use App\Tests\Mock\BillingClientMock;
@@ -151,5 +152,36 @@ class SecurityControllerTest extends AbstractTest
         // админ зашел на страницу профиля
         self::assertEquals('/profile', $client->getRequest()->getPathInfo());
         $this->assertResponseOk();
+    }
+
+    public function testPayCourse(){
+        $client = $this->billingClient();
+        $crawler = $client->request('GET', '/');
+        $crawler = $client->followRedirect();
+        $link = $crawler->selectLink('Вход')->link();
+        $crawler = $client->click($link);
+        $this->assertResponseOk();
+
+        // авторизация с нормальными данными
+        $submitBtn = $crawler->selectButton('Войти');
+        $login = $submitBtn->form([
+            'email' => self::USER_CREDENTIALS['username'],
+            'password' => self::USER_CREDENTIALS['password'],
+        ]);
+        $client->submit($login);
+        $crawler = $client->followRedirect();
+
+        self::assertSame($link = $crawler->filter('.card-subtitle')->first()->innerText(), 'Бесплатный');
+        $link = $crawler->filter('.course-show')->first()->link();
+        $crawler = $client->click($link);
+        $this->assertResponseOk();
+
+        $courseName = $crawler->filter('.course-name')->text();
+        $course = self::getEntityManager()->getRepository(Course::class)->findOneBy([
+            'name' => $courseName,
+        ]);
+
+        $crawler = $client->request('POST', '/courses/' . $course->getId() . '/pay');
+        $this->assertResponseRedirect();
     }
 }

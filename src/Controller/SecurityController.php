@@ -124,10 +124,6 @@ class SecurityController extends AbstractController
             );
 
             if ($transaction['type'] === 'payment') {
-                // if (isset($transaction['expires_at'])) {
-                //     $transaction['expires_at'] = ConverterService::reformatDateTime($transaction['expires_at']);
-                // }
-
                 $transaction['course'] = $courseRepository->findOneBy([
                     'code' => $transaction['course_code']
                 ]);
@@ -142,7 +138,6 @@ class SecurityController extends AbstractController
 
         return $this->render('profile/transactions_index.html.twig', [
             'transactions' => $transactions,
-            //'datetimeFormat' => ConverterService::SIMPLE_DATETIME_FORMAT,
         ]);
     }
 }

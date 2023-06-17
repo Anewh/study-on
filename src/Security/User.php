@@ -11,6 +11,8 @@ class User implements UserInterface
     private $roles = [];
     private $apiToken;
 
+    private ?string $refreshToken = null;
+
     public static function fromDto(UserDto $userDto): User
     {
         return (new self())
@@ -25,6 +27,18 @@ class User implements UserInterface
     public function setEmail(string $email): self
     {
         $this->email = $email;
+
+        return $this;
+    }
+
+    public function getRefreshToken(): ?string
+    {
+        return $this->refreshToken;
+    }
+
+    public function setRefreshToken(string $refreshToken): self
+    {
+        $this->refreshToken = $refreshToken;
 
         return $this;
     }
@@ -70,4 +84,16 @@ class User implements UserInterface
 
         return $this;
     }
+
+
+    public static function jwtDecode(string $token): array
+    {
+        $parts = explode('.', $token);
+        $payload = json_decode(base64_decode($parts[1]), true, 512, JSON_THROW_ON_ERROR);
+        //dd($payload);
+        return [$payload['exp'], $payload['username'], $payload['roles']];
+    }
+
+
+
 }

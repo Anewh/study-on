@@ -10,12 +10,12 @@
                     <p> С вашего счета будет списано {{ billingCourse['price'] }} рублей</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-info" data-bs-dismiss="modal">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
                         Отмена
                     </button>
                     <form name="myform" action="{{ path('app_course_pay', {'id': course.id}) }}" method="post">
                         <input type="hidden" name="_token" value="{{ csrf_token('pay-course' ~ course.id) }}"/>
-                        <button class="btn btn-info">Продолжить</button>
+                        <button class="btn btn-primary">Продолжить</button>
                     </form>
                 </div>
             {% else %}
@@ -23,7 +23,7 @@
                     <p> {{ paymentStatus }} </p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-info" data-bs-dismiss="modal">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">
                         Закрыть
                     </button>
                 </div>

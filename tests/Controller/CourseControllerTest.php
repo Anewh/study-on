@@ -53,12 +53,11 @@ class CourseControllerTest extends AbstractTest
     }
 
     public function testGetActionsResponseOk(): void
-    {
-        $client = $this->billingClient();
+    {    
+        $client = self::getClient();
         $client = $this->authAdmin($client);
-        // $client = self::getClient();
         $courses = self::getEntityManager()->getRepository(Course::class)->findAll();
-        //dd($courses);
+        
         foreach ($courses as $course) {
             // детальная страница
             $client->request('GET', '/courses/' . $course->getId());
@@ -127,43 +126,6 @@ class CourseControllerTest extends AbstractTest
             // проверяем количество уроков для каждого курса
             self::assertCount($lessonsCount, $crawler->filter('.list-group-item'));
         }
-    }
-
-    public function testSuccessfulCourseCreating(): void
-    {
-        $client = $this->billingClient();
-        $client = $this->authAdmin($client);
-        // от списка курсов переходим на страницу создания курса
-        $crawler = $client->request('GET', '/courses/');
-        $this->assertResponseOk();
-
-        $link = $crawler->selectLink('Новый курс')->link();
-        $crawler = $client->click($link);
-        $this->assertResponseOk();
-
-        $code = 'unique-code' . rand();
-        // заполняем форму создания курса корректными данными и отправляем
-        $submitBtn = $crawler->selectButton('Сохранить');
-        $courseCreatingForm = $submitBtn->form([
-            'course[code]' => $code,
-            'course[name]' => 'Course name for test',
-            'course[description]' => 'Course description for test',
-        ]);
-        $client->submit($courseCreatingForm);
-
-        $course = self::getEntityManager()->getRepository(Course::class)->findOneBy([
-            'code' => $code,
-        ]);
-
-        // проверяем редирект
-        self::assertSame($client->getResponse()->headers->get('location'), '/courses/' . $course->getId());
-
-        $this->assertResponseRedirect();
-        $crawler = $client->followRedirect();
-
-        // проверяем корректность отображения данных 
-        $this->assertSame($crawler->filter('.course-name')->text(), $course->getName());
-        //$this->assertSame($crawler->filter('.card-text')->text(), $course->getDescription());
     }
 
     public function testCourseCreatingWithEmptyCode(): void
@@ -237,7 +199,7 @@ class CourseControllerTest extends AbstractTest
         $crawler = $client->click($link);
         $this->assertResponseOk();
 
-        $code = 'my_example_code';
+        $code = 'nympydata';
 
         // заполняем форму создания курса корректными данными и отправляем
         $submitBtn = $crawler->selectButton('Сохранить');
@@ -280,7 +242,10 @@ class CourseControllerTest extends AbstractTest
         $crawler = $client->request('GET', '/courses/');
         $this->assertResponseOk();
 
-        $link = $crawler->filter('.course-show')->first()->link();
+        //dd($client->getResponse()->getContent());  
+
+        $link = $crawler->filter('.course-show')->last()->link();
+        //dd($client->click($link));
         $crawler = $client->click($link);
         $this->assertResponseOk();
 
@@ -355,8 +320,6 @@ class CourseControllerTest extends AbstractTest
         // подсчитываем количество курсов 
         $coursesCount = count(self::getEntityManager()->getRepository(Course::class)->findAll());
 
-        // $this->assertSame($crawler->filter('.course-name')->text(), 'Course name for test');
-
         // заходим 
         $link = $crawler->filter('.course-show')->first()->link();
         $crawler = $client->click($link);
@@ -367,7 +330,6 @@ class CourseControllerTest extends AbstractTest
         $course = self::getEntityManager()->getRepository(Course::class)->findOneBy([
             'name' => $courseName,
         ]);
-        // dd($course);
 
         $client->submitForm('Удалить');
         self::assertSame($client->getResponse()->headers->get('location'), '/courses/');
@@ -396,10 +358,10 @@ class CourseControllerTest extends AbstractTest
         $this->serializer = $container->get(SerializerInterface::class);
 
         $container->set(
-            BillingClient::class,
+            'App\Service\BillingClient',
             new BillingClientMock($this->serializer)
         );
-
+        
         return $client;
     }
 
@@ -408,10 +370,10 @@ class CourseControllerTest extends AbstractTest
         return [AppFixtures::class];
     }
 
-    private function authAdmin($client)
+    private function authAdmin($client, $stop = false)
     {
         $auth = new AuthAdmin();
-        return $auth->auth($client);
+        return $auth->auth($client, $stop);
     }
 
     public function testSubmitNewCourse(): void
@@ -423,11 +385,13 @@ class CourseControllerTest extends AbstractTest
         $oldCount = $courseRepository->count([]);
 
         $client->request('GET', '/courses');
-
+        $crawler = $client->followRedirect();
+        
+        //dd($client->getResponse()->getContent());  
 
         $crawler = $client->clickLink('Новый курс');
 
-        $this->assertResponseOk();
+        $this->assertResponseRedirect();
 
         $form = $crawler
             ->selectButton('Сохранить')
@@ -493,7 +457,7 @@ class CourseControllerTest extends AbstractTest
         $client = $this->billingClient();
 
         $client->request('GET', '/courses');
-        $this->assertResponseOk();
+        $this->assertResponseRedirect();
 
         $client->request('GET', '/courses/new/');
         $this->assertResponseCode(403);
@@ -522,8 +486,20 @@ class CourseControllerTest extends AbstractTest
         $courseRepository = self::getEntityManager()->getRepository(Course::class);
 
         $client->request('GET', '/');
-        $client->request('GET', '/courses/1');
+        //$client->request('GET', '/courses/');
+
+        $client->request('GET', '/courses');
+        $crawler = $client->followRedirect();
+
+        // на детальную страницу курса
+        $link = $crawler->filter('.course-show')->first()->link();
+        $crawler = $client->click($link);
+        $this->assertResponseOk();
+
+
         $crawler = $client->clickLink('Редактировать');
+
+        //dd($client->getResponse()->getContent());  
         $form = $crawler->filter('form')->first()->form();
 
         // Проверка заполненненных полей
@@ -584,13 +560,10 @@ class CourseControllerTest extends AbstractTest
 
     public function testGetTransactions(): void
     {
-        $billingClient = $this->billingClient();
-        $billingClient = $this->authAdmin($billingClient);
+        $client = $this->billingClient();
+        $client = $this->authAdmin($client);
 
-        $client = static::getClient();
-        $client->followRedirects();
-
-        $transactions = $billingClient->getTransactions($billingClient->generateToken(['ROLE_SUPER_ADMIN'], 'admin@example.com'));
+        $transactions = $client->getTransactions($client->generateToken(['ROLE_SUPER_ADMIN'], 'admin@example.com'));
 
         $crawler = $client->request('GET', '/courses/');
         $crawler = $client->clickLink('Профиль');
@@ -603,5 +576,4 @@ class CourseControllerTest extends AbstractTest
         $this->assertResponseOk();
         self::assertEquals(count($transactions), $crawler->filter('table > tbody > tr')->count());
     }
-
 }

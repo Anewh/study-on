@@ -39,20 +39,22 @@ class BillingAuthenticator extends AbstractLoginFormAuthenticator
         $password = $request->request->get('password', '');
 
         try {
-            $token = $this->billingClient->auth(['username' => $email, 'password' => $password])['token'];
+            $body = $this->billingClient->auth(['username' => $email, 'password' => $password]);
+            $token = $body['token'];
+            $refreshToken = $body['refresh_token'];
         } catch (BillingUnavailableException $e) {
             throw new AuthenticationException('Неправильный логин или пароль');
         }
         $request->getSession()->set(Security::LAST_USERNAME, $email);
 
-        $userLoader = function ($token): UserInterface {
+        $userLoader = function ($token) use ($refreshToken): UserInterface {
             try {
                 
                 $userDto = $this->billingClient->getCurrentUser($token);
             } catch (BillingUnavailableException $e) {
                 throw new AuthenticationException(self::SERVICE_TEMPORARILY_UNAVAILABLE);
             }
-            return User::fromDto($userDto)->setApiToken($token);
+            return User::fromDto($userDto)->setApiToken($token)->setRefreshToken($refreshToken);
         };
 
         
