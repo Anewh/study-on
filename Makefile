@@ -30,6 +30,9 @@ encore_prod:
 phpunit:
 	@${PHP} bin/console d:f:l --env=test -n && ${PHP} bin/phpunit
 
+phpunit_failing:
+	@${PHP} bin/console d:f:l --env=test -n && ${PHP} bin/phpunit --group failing
+
 # В файл local.mk можно добавлять дополнительные make-команды,
 # которые требуются лично вам, но не нужны на проекте в целом
 -include local.mk

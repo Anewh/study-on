@@ -62,7 +62,6 @@ class CourseController extends AbstractController
         $courses = Utils::mapToKey($courseRepository->findAllToArray(), 'code');
 
         foreach($courses as $key => &$course){
-            // dd($billingCourses);
             $course['type'] = $billingCourses[$key]['type'];
             $course['price'] = $billingCourses[$key]['price'] ?? null;
         }

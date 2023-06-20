@@ -233,9 +233,11 @@ class LessonControllerTest extends AbstractTest
         $container = static::getContainer();
         $this->serializer = $container->get(SerializerInterface::class);
 
-        $container->set(BillingClient::class,
-           new BillingClientMock($this->serializer));
-
+        $container->set(
+            'App\Service\BillingClient',
+            new BillingClientMock($this->serializer)
+        );
+        
         return $client;
     }
 
@@ -250,7 +252,7 @@ class LessonControllerTest extends AbstractTest
         $crawler = $client->click($link);
         $this->assertResponseOk();
 
-        $link = $crawler->filter('.lesson')->first()->link();
+        $link = $crawler->filter('a[href^="/lessons/"]')->first()->link();
         $crawler = $client->click($link);
         $this->assertResponseOk();
 
@@ -274,10 +276,12 @@ class LessonControllerTest extends AbstractTest
         $crawler = $client->followRedirect();
         $this->assertResponseOk();
 
-        // проверяем, что урок отредактирован
-        $this->assertSame($crawler->filter('.lesson')->last()->text(), 'Test edit lesson');
+        $lastLesson = $crawler->filter('li > a[href^="/lessons/"]')->last();
 
-        $link = $crawler->filter('.lesson')->last()->link();
+        // проверяем, что урок отредактирован
+        $this->assertSame($lastLesson->text(), 'Test edit lesson');
+
+        $link = $lastLesson->link();
         $crawler = $client->click($link);
         $this->assertResponseOk();
 
@@ -297,7 +301,7 @@ class LessonControllerTest extends AbstractTest
         $crawler = $client->click($link);
         $this->assertResponseOk();
 
-        $link = $crawler->filter('.lesson')->first()->link();
+        $link = $crawler->filter('li > a[href^="/lessons/"]')->first()->link();
         $crawler = $client->click($link);
         $this->assertResponseOk();
 
@@ -312,36 +316,43 @@ class LessonControllerTest extends AbstractTest
             ->findOneBy(['id' => $form['lesson[course]']->getValue()]);
 
         // количество до удаления
-        $countBeforeDeleting = count($course->getLessons());
+        $prevCount = count($course->getLessons());
 
         $link = $crawler->filter('.course')->first()->link();
         $crawler = $client->click($link);
         $this->assertResponseOk();
 
-        $link = $crawler->filter('.lesson')->first()->link();
+        $link = $crawler->filter('li > a[href^="/lessons/"]')->first()->link();
         $crawler = $client->click($link);
         $this->assertResponseOk();
         $client->submitForm('Удалить');
         self::assertSame($client->getResponse()->headers->get('location'), '/courses/' . $course->getId());
         $crawler = $client->followRedirect();
 
-        self::assertCount($countBeforeDeleting - 1, $crawler->filter('.lesson'));
+        self::assertCount($prevCount - 1, $crawler->filter('li > a[href^="/lessons/"]'));
     }
 
     public function testShowPaidLesson(): void
     {
-        $billingClientMock = $this->billingClient();
-        $billingClientMock = $this->authAdmin($billingClientMock);
+        $client = $this->billingClient();
 
-        $transactions = $billingClientMock->getTransactions($billingClientMock->generateToken(['ROLE_SUPER_ADMIN'], 'admin@example.com'));; // Курс изначально куплен
+        $course = self::getEntityManager()
+            ->getRepository(Course::class)
+            ->findOneBy(['code' => 'molecularphysics']);
 
-        $client = static::getClient();
-        $client->followRedirects();
+        $crawler = $client->request('GET', '/courses/' . $course->getId());
+        $this->assertSame(0, $crawler->filter('li > a[href^="/lessons/"]')->count());
 
-        $course = $this->getEntityManager()->getRepository(Course::class)->findOneBy(['code' => $transactions[0]['course_code']]);
-        $client->request('GET', '/');
-        $client->request('GET', '/courses/' . $course->getId());
+        $lesson = $course->getLessons()->first();
+        $client->request('GET', '/lessons/' . $lesson->getId());
+        self::assertResponseRedirect();
+
+        $client = $this->authAdmin($client);
+
+        $crawler = $client->request('GET', '/courses/' . $course->getId());
+
+        $link = $crawler->filter('li > a[href^="/lessons/"]')->first()->link();
+        $crawler = $client->click($link);
         $this->assertResponseOk();
     }
-
 }

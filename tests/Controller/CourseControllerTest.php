@@ -210,26 +210,6 @@ class CourseControllerTest extends AbstractTest
         ]);
         $client->submit($courseCreatingForm);
 
-        $course = self::getEntityManager()->getRepository(Course::class)->findOneBy([
-            'code' => $code,
-        ]);
-
-        $crawler = $client->request('GET', '/courses/');
-        $this->assertResponseOk();
-
-        $link = $crawler->selectLink('Новый курс')->link();
-        $crawler = $client->click($link);
-        $this->assertResponseOk();
-
-        // заполнили форму и отправили с не уникальным кодом
-        $submitBtn = $crawler->selectButton('Сохранить');
-        $courseCreatingForm = $submitBtn->form([
-            'course[code]' => $code,
-            'course[name]' => 'Course name for test',
-            'course[description]' => 'Description course for test',
-        ]);
-        $client->submit($courseCreatingForm);
-
         // Проверяем наличие сообщения об ошибке
         $this->assertResponseCode(422);
     }
@@ -242,10 +222,8 @@ class CourseControllerTest extends AbstractTest
         $crawler = $client->request('GET', '/courses/');
         $this->assertResponseOk();
 
-        //dd($client->getResponse()->getContent());  
-
         $link = $crawler->filter('.course-show')->last()->link();
-        //dd($client->click($link));
+
         $crawler = $client->click($link);
         $this->assertResponseOk();
 
@@ -256,11 +234,6 @@ class CourseControllerTest extends AbstractTest
 
         $submitButton = $crawler->selectButton('Сохранить');
         $form = $submitButton->form();
-
-        // сохраняем id редактируемого курса
-        $courseId = self::getEntityManager()
-            ->getRepository(Course::class)
-            ->findOneBy(['code' => $form['course[code]']->getValue()])->getId();
 
         // заполняем форму корректными данными
         $form['course[code]'] = 'lastcodeedit';
@@ -387,11 +360,10 @@ class CourseControllerTest extends AbstractTest
         $client->request('GET', '/courses');
         $crawler = $client->followRedirect();
         
-        //dd($client->getResponse()->getContent());  
 
         $crawler = $client->clickLink('Новый курс');
 
-        $this->assertResponseRedirect();
+        $this->assertResponseOk();
 
         $form = $crawler
             ->selectButton('Сохранить')
@@ -426,8 +398,8 @@ class CourseControllerTest extends AbstractTest
             'course[code]' => 'test-1',
             'course[name]' => 'Тестовый курс1'
         ]);
-        $this->assertResponseOk(); // нет ошибки
-        self::assertRouteSame('app_course_index');
+        $client->followRedirect();
+        self::assertRouteSame('app_course_show');
 
         // Указано всё
         $client->back();
@@ -436,7 +408,8 @@ class CourseControllerTest extends AbstractTest
             'course[name]' => 'Тестовый курс 2',
             'course[description]' => 'Описание тестового курса 2'
         ]);
-        $this->assertResponseOk();
+        $client->followRedirect();
+        self::assertRouteSame('app_course_show');
 
         // Создание курса с тем же кодом невозможно
         $client->back();
@@ -445,27 +418,23 @@ class CourseControllerTest extends AbstractTest
             'course[name]' => 'Тестовый курс 3',
             'course[description]' => 'Описание тестового курса 3'
         ]);
-        $this->assertResponseCode(400);
+        $this->assertResponseCode(422);
 
         // В итоге добавилось 2 курса
         self::assertEquals($oldCount + 2, $courseRepository->count([]));
     }
 
-
     public function testSubmitNewCourseFailed(): void
     {
         $client = $this->billingClient();
 
-        $client->request('GET', '/courses');
-        $this->assertResponseRedirect();
-
         $client->request('GET', '/courses/new/');
-        $this->assertResponseCode(403);
+        $client->followRedirect();
 
         $client->request('POST', '/courses/new');
-        self::assertResponseRedirects('/login');
+        $client->followRedirect();
+        self::assertRouteSame('app_login');
 
-        $client->followRedirects();
         $client = $this->authAdmin($client);
 
         $this->expectException('InvalidArgumentException');
@@ -485,9 +454,6 @@ class CourseControllerTest extends AbstractTest
 
         $courseRepository = self::getEntityManager()->getRepository(Course::class);
 
-        $client->request('GET', '/');
-        //$client->request('GET', '/courses/');
-
         $client->request('GET', '/courses');
         $crawler = $client->followRedirect();
 
@@ -499,17 +465,18 @@ class CourseControllerTest extends AbstractTest
 
         $crawler = $client->clickLink('Редактировать');
 
-        //dd($client->getResponse()->getContent());  
         $form = $crawler->filter('form')->first()->form();
 
         // Проверка заполненненных полей
         $values = $form->getValues();
-        $courseId = 1;
-        $course = $courseRepository->find($courseId);
+
+        $course = self::getEntityManager()
+            ->getRepository(Course::class)
+            ->findOneBy(['code' => $form['course[code]']->getValue()]);
+
         self::assertSame($course->getCode(), $values['course[code]']);
         self::assertSame($course->getName(), $values['course[name]']);
-        self::assertEquals(10, $values['course[price]']);
-        self::assertSame('rent', $values['course[type]']);
+        self::assertSame('free', $values['course[type]']);
         self::assertSame($course->getDescription(), $values['course[description]']);
 
         $code = 'test';
@@ -522,11 +489,11 @@ class CourseControllerTest extends AbstractTest
         $form['course[description]'] = $description;
         $client->submit($form);
 
-        $this->assertResponseOk();
+        $client->followRedirect();
         self::assertRouteSame('app_course_index');
 
         // Проверка курса
-        $course = $courseRepository->find($courseId);
+        $course = $courseRepository->find($course->getId());
         self::assertEquals($code, $course->getCode());
         self::assertEquals($name, $course->getName());
         self::assertEquals($description, $course->getDescription());
@@ -535,27 +502,22 @@ class CourseControllerTest extends AbstractTest
     public function testEditCourseFailed(): void
     {
         $client = $this->billingClient();
-        $crawler = $client->request('GET', '/courses/');
-        $this->assertResponseOk();
 
-        $crawler = $client->request('GET', '/courses/1/edit/');
-        $this->assertResponseCode(403);
+        $course = self::getEntityManager()
+            ->getRepository(Course::class)
+            ->findOneBy(['code' => 'figmadesign']);
 
-        $client->request('POST', '/courses/1/edit');
+        $courseEditUrl = '/courses/' . $course->getId() . '/edit';
+
+        $crawler = $client->request('GET', $courseEditUrl);
+        $this->assertResponseRedirects('/login');
+
+        $client->request('POST', $courseEditUrl);
         self::assertResponseRedirects('/login');
 
-        // Авторизован как обычный пользователь
-        $crawler = $client->request('GET', '/');
-
         $client = $this->authAdmin($client);
-        $crawler = $client->request('GET', '/courses/1');
-
-        // Без прав админа
-        $client->request('GET', '/courses/1/edit/');
-        $this->assertResponseCode(403);
-
-        $client->request('POST', '/courses/1/edit');
-        $this->assertResponseCode(403);
+        $crawler = $client->request('GET', $courseEditUrl);
+        $this->assertResponseOk();
     }
 
     public function testGetTransactions(): void

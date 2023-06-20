@@ -5,7 +5,9 @@ namespace App\Tests\Mock;
 use App\Dto\CourseDto;
 use App\Dto\UserDto;
 use App\Entity\Course;
+use App\Enum\CourseType;
 use App\Exception\BillingUnavailableException;
+use App\Exception\CourseAlreadyPaidException;
 use App\Exception\CustomUserMessageAuthenticationException;
 use App\Security\User;
 use App\Service\BillingClient;
@@ -32,21 +34,26 @@ class BillingClientMock extends BillingClient
     private const COURSES_DATA = [
         [
             'code' => 'nympydata',
-            'type' => 0,
+            'type' => CourseType::FREE_NAME,
         ],
         [
             'code' => 'figmadesign',
-            'type' => 1,
+            'type' => CourseType::RENT_NAME,
             'price' => 10,
         ],
         [
             'code' => 'molecularphysics',
-            'type' => 2,
+            'type' => CourseType::BUY_NAME,
             'price' => 20,
         ]
     ];
 
-    private $courses = array();
+    private const TRANSACTIONS_DATA = [
+        0 => ['id' => 112, 'created_at' => '2023-06-07T22:40:36+00:00', 'type' => 'payment', 'course_code' => 'molecularphysics', 'amount' => 20], 
+        1 => ['id' => 113, 'created_at' => '2023-06-07T22:40:36+00:00', 'expires_at' => '2023-06-14T22:40:36+00:00', 'type' => 'payment', 'course_code' => 'figmadesign', 'amount' => 10]
+    ];
+
+    private array $courses = [];
     private Serializer $serializer;
 
     public function __construct(SerializerInterface $serializer)
@@ -54,9 +61,8 @@ class BillingClientMock extends BillingClient
         parent::__construct($serializer);
 
         foreach (self::COURSES_DATA as $i => $value) {
-            array_push($this->courses, $value);
+            $this->courses[$value['code']] = $value;
         }
-
     }
 
     public function auth($credentials): array
@@ -121,7 +127,7 @@ class BillingClientMock extends BillingClient
         ?string $courseCode = null,
         bool $skipExpired = false
     ): array {
-        return [0 => ['id' => 112, 'created_at' => '2023-06-07T22:40:36+00:00', 'type' => 'payment', 'course_code' => 'molecularphysics', 'amount' => 20,], 1 => ['id' => 113, 'created_at' => '2023-06-07T22:40:36+00:00', 'expires_at' => '2023-06-14T22:40:36+00:00', 'type' => 'payment', 'course_code' => 'figmadesign', 'amount' => 10,]];
+        return self::TRANSACTIONS_DATA;
     }
 
     public function generateToken(array $roles = null, string $username): string
@@ -135,19 +141,14 @@ class BillingClientMock extends BillingClient
 
     public function getCourses(): array
     {
-        return $this->courses;
+        return array_values($this->courses);
     }
 
     public function getCourse(string $code): array
     {
-
-        $course = '';
-        foreach($this->courses as $elem){
-            if($elem['code'] = $code)
-                $course = $elem;
-        }
+        $course = $this->courses[$code] ?? null;
         
-        if ($course) {
+        if ($course !== null) {
             return $course;
         } else {
             return throw new BillingUnavailableException();
@@ -156,14 +157,25 @@ class BillingClientMock extends BillingClient
 
     public function payCourse(string $token, string $code): array
     {
+        foreach (self::TRANSACTIONS_DATA as $transaction) {
+            if ($transaction['course_code'] === $code) {
+                throw new CourseAlreadyPaidException();
+            }
+        }
+        
         return [
-            'code' => 404
+            'success' => true
         ];
     }
 
     public function saveCourse(string $token, CourseDto $course, string $code = null): bool
     {
-        array_push($this->courses, $course);
+        unset($this->courses[$code]);
+        $this->courses[$course->getCode()] = [
+            'code' => $course->getCode(),
+            'type' => $course->getType(),
+            'price' => $course->getPrice(),
+        ];
         return true;
     }
 

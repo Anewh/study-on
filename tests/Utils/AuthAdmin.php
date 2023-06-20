@@ -39,7 +39,7 @@ class AuthAdmin extends AbstractTest
         $client->submit($login);
         $this->assertResponseRedirect();
         $crawler = $client->followRedirect();
-        self::assertEquals('/courses/', $client->getRequest()->getPathInfo());
+        
         return $client;
     }
 

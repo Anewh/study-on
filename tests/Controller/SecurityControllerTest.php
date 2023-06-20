@@ -154,7 +154,7 @@ class SecurityControllerTest extends AbstractTest
         $this->assertResponseOk();
     }
 
-    public function testPayCourse(){
+    public function testPayCourse() {
         $client = $this->billingClient();
         $crawler = $client->request('GET', '/');
         $crawler = $client->followRedirect();
